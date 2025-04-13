@@ -20,13 +20,9 @@ class Protocol:
             self.flags
         ) + self.data
 
-
     def get_bytes(self, datagram):
         header_size = struct.calcsize("!HHIIB")
         header = struct.unpack("!HHIIB", datagram[:header_size])
-        self.payload_size, self.window_size, self.sequence_number, self.acknowledgment_number, self.flags = header
-        self.data = datagram[header_size:header_size+self.payload_size]        
-
-
-    
-
+        self.payload_size, self.window_size, self.sequence_number,
+        self.acknowledgment_number, self.flags = header
+        self.data = datagram[header_size:header_size+self.payload_size]
