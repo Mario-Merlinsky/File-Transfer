@@ -7,6 +7,7 @@ from lib.protocol import handle_protocol
 
 MSS = 1024
 MEMORY = 1024 ** 3
+TIMEOUT = 1
 
 
 def client_upload_message(
@@ -32,16 +33,19 @@ def client_upload_message(
     sock.sendto(syn_datagram.to_bytes(), addr)
 
     try:
-        data, _ = sock.recvfrom(MSS)  # Dudas: que poner el MSS es correcto,
-        # si esta haciendo algun tipo de await hasta que le caiga algo.
-        # si no lo esta haciendo habria que poner un timeout
+        data, _ = sock.recvfrom(MSS)
+        sock.settimeout(TIMEOUT)
 
         ack_datagram = Datagram.from_bytes(data)
         ack_payload = ack_datagram.analyze()
 
-        if ack_payload is not UploadACK:
+        if not isinstance(ack_payload, UploadACK):
             print("No se recibió un ACK válido")
             return
+
+    except socket.timeout:
+        print("Timeout: No se recibió un ACK")
+        return
 
     except Exception as e:
         print(f"Error al recibir ACK: {e}")
