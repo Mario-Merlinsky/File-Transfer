@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class Flags(Enum):
-    UPDATE = 1
+class Flags(IntEnum):
+    UPDLOAD = 1
     DOWNLOAD = 2
     SYN = 3
-    ACK = 4
-    FIN = 5
+    ACK = 6
+    FIN = 9

@@ -7,6 +7,6 @@ class UploadACK:
         ack_segment = mss_bytes
         return ack_segment
 
-    def get_bytes(Self, bytes: bytes) -> 'UploadACK':
+    def from_bytes(Self, bytes: bytes) -> 'UploadACK':
         mss = int.from_bytes(bytes[:2])
         return UploadACK(mss)

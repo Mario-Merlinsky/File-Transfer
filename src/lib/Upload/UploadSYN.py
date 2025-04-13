@@ -15,7 +15,7 @@ class UploadSYN:
 
         return syn_segment
 
-    def get_bytes(Self, bytes: bytes) -> 'UploadSYN':
+    def from_bytes(Self, bytes: bytes) -> 'UploadSYN':
         filename_lenght = int.from_bytes(bytes[0:2])
         bytes = bytes[2:]
         filename = bytes[:filename_lenght].decode('utf-8')
