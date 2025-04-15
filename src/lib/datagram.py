@@ -1,54 +1,45 @@
-import struct
-from flags import Flags
-from Upload import UploadACK, UploadSYN
-from Download import DownloadACK, DownloadSYN
-
-HEADER_SIZE = struct.calcsize("!HHIIB")
+from .Header import Header, HEADER_SIZE
+from .Flags import Flags
 
 
 class Datagram:
 
     def __init__(
-        self, payload_size, window_size, sequence_number,
-        acknowledgment_number, flags, data
+        self, header: Header, data: bytes
     ):
-        self.payload_size = payload_size
-        self.window_size = window_size
-        self.sequence_number = sequence_number
-        self.acknowledgment_number = acknowledgment_number
-        self.flags = flags
+        self.header = header
         self.data = data
 
     def to_bytes(self):
-        return struct.pack(
-            "!HHIIB",
-            self.payload_size,
-            self.window_size,
-            self.sequence_number,
-            self.acknowledgment_number,
-            self.flags
-        ) + self.data
-
-    def from_bytes(Self, datagram) -> 'Datagram':
-        header = struct.unpack("!HHIIB", datagram[:HEADER_SIZE])
-        payload_size, window_size, sequence_number, ack_number, flags = header
-        return Datagram(
-            payload_size,
-            window_size,
-            sequence_number,
-            ack_number,
-            flags,
-            datagram[HEADER_SIZE:HEADER_SIZE + payload_size]
-        )
+        return self.header.to_bytes() + self.data
 
     # -> Mensaje
     def analyze(self):
-        match self.flags:
-            case Flags.SYN | Flags.UPLOAD:
-                return UploadSYN.from_bytes(self.data)
-            case Flags.ACK | Flags.UPLOAD:
-                return UploadACK.from_bytes(self.data)
-            case Flags.SYN | Flags.DOWNLOAD:
-                return DownloadSYN.from_bytes(self.data)
-            case Flags.ACK | Flags.DOWNLOAD:
-                return DownloadACK.from_bytes(self.data)
+        return self.header.analyze(self.data)
+
+    def get_sequence_number(self) -> int:
+        return self.header.sequence_number
+
+    def get_payload_size(self) -> int:
+        return self.header.payload_size
+
+    def is_fin(self) -> bool:
+        return self.header.flags == Flags.FIN
+
+    def is_ack(self) -> bool:
+        return self.header.flags == Flags.ACK
+
+    @staticmethod
+    def from_bytes(datagram) -> 'Datagram':
+        header = Header.from_bytes(datagram)
+        return Datagram(
+            header,
+            datagram[HEADER_SIZE:HEADER_SIZE + header.payload_size]
+        )
+
+    @staticmethod
+    def make_error_datagram(
+        seq_number: int, ack_number, payload: bytes
+    ) -> 'Datagram':
+        header = Header(len(payload), 0, seq_number, ack_number, Flags.ERROR)
+        return Datagram(header, payload)

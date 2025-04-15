@@ -1,6 +1,11 @@
 import argparse
+import socket
+from lib.Client import Client
+from lib.StopAndWait import StopAndWait
+from lib.GoBackN import GoBackN
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser(description='< command description >')
 
     group = parser.add_mutually_exclusive_group()
@@ -21,14 +26,26 @@ if __name__ == '__main__':
         type=str,
         help='error recovery protocol',
         required=True,
-        choices=['GBN', 'S&W'],
+        choices=['GBN', 'SW'],
         default='GBN'
     )
 
     args = parser.parse_args()
+    recovery_protocol = None
+    addr = (args.host, args.port)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    match args.protocol:
+        case 'GBN':
+            recovery_protocol = GoBackN(sock, addr)
+        case 'SW':
+            recovery_protocol = StopAndWait(sock, addr)
+    client = Client(
+        recovery_protocol,
+        args.dst,
+        args.name
+    )
+    client.start_download()
 
-    if args.verbose and args.quiet:
-        parser.error('Cannot use both -v/--verbose and -q/--quiet')
 
-# setear log con modo verbose o quiet
-# Llamar cliente con argumentos
+if __name__ == '__main__':
+    main()

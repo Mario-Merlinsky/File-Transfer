@@ -1,4 +1,7 @@
-class DownloadACK:
+from .Message import Message
+
+
+class DownloadACK(Message):
     def __init__(self, filesize: int, mss: int):
         self.filesize = filesize
         self.mss = mss
@@ -10,7 +13,8 @@ class DownloadACK:
         ack_segment = filesize_bytes + mss_bytes
         return ack_segment
 
-    def from_bytes(Self, bytes: bytes) -> 'DownloadACK':
+    @staticmethod
+    def from_bytes(bytes: bytes) -> 'DownloadACK':
         filesize = int.from_bytes(bytes[0:4])
         bytes = bytes[4:]
         mss = int.from_bytes(bytes[:2])

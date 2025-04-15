@@ -1,67 +1,8 @@
 import argparse
 import socket
-from lib.Upload import UploadSYN, UploadACK
-from lib.datagram import Datagram
-from lib.flags import Flags
-from lib.protocol import handle_protocol
-
-MSS = 1024
-MEMORY = 1024 ** 3
-TIMEOUT = 1
-
-
-def client_upload_message(
-    addr: tuple[str, int],
-    sock: socket.socket,
-    filepath: str,
-    filename: str,
-    protocol: str
-):
-
-    try:
-        with open(filepath, "rb") as file:
-            file_data = file.read()
-    except FileNotFoundError:
-        print(f"No se pudo abrir el archivo: {filepath}")
-        return
-
-    syn_payload = UploadSYN(filename=filename, filesize=len(file_data))
-    syn_datagram = Datagram(
-        flags=Flags.SYN | Flags.UPDATE,
-        seq=0,
-        payload=syn_payload)
-    sock.sendto(syn_datagram.to_bytes(), addr)
-
-    try:
-        data, _ = sock.recvfrom(MSS)
-        sock.settimeout(TIMEOUT)
-
-        ack_datagram = Datagram.from_bytes(data)
-        ack_payload = ack_datagram.analyze()
-
-        if not isinstance(ack_payload, UploadACK):
-            print("No se recibió un ACK válido")
-            return
-
-    except socket.timeout:
-        print("Timeout: No se recibió un ACK")
-        return
-
-    except Exception as e:
-        print(f"Error al recibir ACK: {e}")
-        return
-
-    handle_protocol(
-        protocol=protocol,
-        addr=addr,
-        sock=sock,
-        file_data=file_data,
-        filename=filename
-        # quizas habria que agregar un Type que sea 1 o 0 si es de envio o
-        # recibo
-    )
-
-    return
+from lib.StopAndWait import StopAndWait
+from lib.GoBackN import GoBackN
+from lib.Client import Client
 
 
 def main():
@@ -85,22 +26,25 @@ def main():
         type=str,
         help='error recovery protocol',
         required=True,
-        choices=['GBN', 'S&W'],
+        choices=['GBN', 'SW'],
         default='GBN'
     )
 
     args = parser.parse_args()
-
+    recovery_protocol = None
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((args.host, args.port))
-
-    client_upload_message(
-        addr=(args.host, args.port),
-        sock=sock,
-        filepath=args.src,
-        filename=args.name,
-        protocol=args.protocol
+    addr = (args.host, args.port)
+    match args.protocol:
+        case 'GBN':
+            recovery_protocol = GoBackN(sock, addr)
+        case 'SW':
+            recovery_protocol = StopAndWait(sock, addr)
+    client = Client(
+        recovery_protocol,
+        args.src,
+        args.name
     )
+    client.start_upload()
 
 
 # setear log con modo verbose o quiet
