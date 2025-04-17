@@ -42,8 +42,11 @@ def main():
     client = Client(
         recovery_protocol,
         args.src,
-        args.name
+        args.name,
+        addr,
+        sock
     )
+
     client.start_upload()
 
 

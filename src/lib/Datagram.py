@@ -20,6 +20,9 @@ class Datagram:
     def get_sequence_number(self) -> int:
         return self.header.sequence_number
 
+    def get_ack_number(self) -> int:
+        return self.header.acknowledgment_number
+
     def get_payload_size(self) -> int:
         return self.header.payload_size
 

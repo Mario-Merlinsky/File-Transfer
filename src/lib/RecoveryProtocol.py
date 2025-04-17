@@ -7,16 +7,13 @@ class RecoveryProtocol(ABC):
     def __init__(self, socket: socket.socket, addr: tuple[str, int] = None):
         self.socket = socket
         self.addr = addr
-        self.ack = 0
-        self.seq = 0
-        self.window_size = 0
 
     @abstractmethod
-    def send(self, data: bytes, mss: int):
+    def send(self, endpoint, data: bytes, mss: int):
         pass
 
     @abstractmethod
-    def receive(self) -> bytes:
+    def receive(self, endpoint) -> bytes:
         pass
 
     @abstractmethod
