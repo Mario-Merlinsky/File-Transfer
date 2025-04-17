@@ -13,7 +13,7 @@ class Endpoint:
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
         self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
-        self.reciving_queue = []
+        self.recovery_protocol = recovery_protocol
 
     last_ack: Optional[Datagram] = None
 

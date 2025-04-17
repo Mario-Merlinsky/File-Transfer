@@ -40,13 +40,12 @@ class StopAndWait(RecoveryProtocol):
             )
             datagram = Datagram(header, data=segment)
 
-            print(
-                f"Enviando datagrama con: seq={endpoint.seq} "
-                f"ack={endpoint.ack} wdw={endpoint.window_size}"
-            )
-
             while True:
                 try:
+                    print(
+                            f"Enviando datagrama con: seq={endpoint.seq} "
+                            f"ack={endpoint.ack} wdw={endpoint.window_size}"
+                        )
                     self.socket.sendto(datagram.to_bytes(), self.addr)
                     response_data, _ = self.socket.recvfrom(
                         endpoint.window_size)  # Me quede aca
@@ -59,7 +58,7 @@ class StopAndWait(RecoveryProtocol):
                     )
 
                     print(endpoint.seq)
-                    print(endpoint.ack == response_datagram.get_ack_number())
+                    print(endpoint.seq == response_datagram.get_ack_number())
 
                     if response_datagram.is_ack() and \
                             response_datagram.get_ack_number() == endpoint.seq:
@@ -86,7 +85,6 @@ class StopAndWait(RecoveryProtocol):
         last_ack: Datagram
     ):
         bytes_written = 0
-
         while bytes_written < file_size:
             try:
                 data = queue.get()
@@ -96,11 +94,11 @@ class StopAndWait(RecoveryProtocol):
                     break
 
                 current_seq = datagram.get_sequence_number()
-
-                print(current_seq)
+                print(f"el datagrama que me llego tiene seq = {current_seq}")
                 print(f"ack: {endpoint.ack}")
 
                 if current_seq == endpoint.ack:
+                    print("me llego el paquete que esperaba")
                     payload_size = datagram.get_payload_size()
                     file.write(datagram.data[:payload_size])
                     bytes_written += payload_size
@@ -112,6 +110,7 @@ class StopAndWait(RecoveryProtocol):
                     self.socket.sendto(last_ack.to_bytes(), self.addr)
                 else:
                     # Reenviar último ACK
+                    print("reenvio ack porque no me llego el que esperaba")
                     self.socket.sendto(last_ack.to_bytes(), self.addr)
 
             except queue.Empty:

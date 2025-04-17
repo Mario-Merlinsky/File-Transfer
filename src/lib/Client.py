@@ -1,4 +1,8 @@
+from pathlib import Path
 from time import time
+import socket
+from threading import Thread
+from queue import Queue
 from .Flags import Flags
 from .Header import Header, HEADER_SIZE
 from .Datagram import Datagram
@@ -9,6 +13,7 @@ from .Messages.DownloadSYN import DownloadSYN
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from .Util import read_file
+
 
 MSS = 1024
 INITIAL_RTT = 1
@@ -24,10 +29,9 @@ class Client(Endpoint):
         filepath: str,
         filename: str,
         dest_addr: tuple[str, int],
-        dest_sock: int,
+        dest_sock: socket.socket,
     ):
         super().__init__(recovery_protocol, MSS)
-        self.recovery_protocol = recovery_protocol
         self.filepath = filepath
         self.filename = filename
         self.destination_addr = dest_addr
@@ -45,7 +49,7 @@ class Client(Endpoint):
         datagram = Datagram(header, syn_payload).to_bytes()
         try:
             self.destination_socket.sendto(datagram, self.destination_addr)
-            data, _ = self.destination_socket.recvfrom(MSS)
+            data, _ = self.destination_socket.recvfrom(MSS + HEADER_SIZE)
 
         except TimeoutError:
             self.handshake(syn_payload, flags)
@@ -53,72 +57,61 @@ class Client(Endpoint):
         return Datagram.from_bytes(data)
 
     def start_upload(self):
-        try:
-            file_data = read_file(self.filepath)
-            self.destination_socket.settimeout(INITIAL_RTT)
+        file_data = read_file(self.filepath)
+        self.destination_socket.settimeout(INITIAL_RTT)
 
-            syn_payload = UploadSYN(
-                self.filename,
-                len(file_data),
-                MSS,
-                self.recovery_protocol.PROTOCOL_ID
-            ).to_bytes()
+        syn_payload = UploadSYN(
+            self.filename,
+            len(file_data),
+            MSS,
+            self.recovery_protocol.PROTOCOL_ID
+        ).to_bytes()
 
-            flag = Flags.SYN_UPLOAD
-            start = time()
-            syn_ack = self.handshake(syn_payload, flag)
-            end = time()
-            rtt = end - start
-            self.destination_socket.settimeout(rtt * TIMEOUT_COEFFICIENT)
+        flag = Flags.SYN_UPLOAD
+        start = time()
+        syn_ack = self.handshake(syn_payload, flag)
+        rtt = time() - start
+        self.destination_socket.settimeout(rtt * TIMEOUT_COEFFICIENT)
 
-            ack_payload = syn_ack.analyze()
+        ack_payload = syn_ack.analyze()
 
-            if not isinstance(ack_payload, UploadACK):
-                print(ack_payload.msg)
-                return
-
-        except Exception as e:
-            print(f"Error al recibir ACK: {e}")
+        if not isinstance(ack_payload, UploadACK):
+            print(ack_payload.msg)
             return
 
         self.recovery_protocol.send(self, file_data, ack_payload.mss)
 
     def start_download(self):
-        socket = self.recovery_protocol.socket
-        server_adrr = self.recovery_protocol.addr
-        socket.settimeout(INITIAL_RTT)
+        self.destination_socket.settimeout(INITIAL_RTT)
         payload = DownloadSYN(
             self.filename,
             MSS,
             self.recovery_protocol.PROTOCOL_ID
         ).to_bytes()
-        flags = Flags.SYN_DOWNLOAD
-        header = Header(
-            len(payload),
-            (MSS + HEADER_SIZE) * self.recovery_protocol.PROTOCOL_ID,
-            INITIAL_SEQ_NUMBER,
-            INITIAL_ACK_NUMBER,
-            flags,
-        )
-        datagram = Datagram(header, payload).to_bytes()
+        flag = Flags.SYN_DOWNLOAD
         start = time()
-        socket.sendto(datagram, server_adrr)
-        try:
-            data, _ = socket.recvfrom(MSS)
-            end = time()
-            rtt = end - start
-            socket.settimeout(rtt * TIMEOUT_COEFFICIENT)
-            ack_datagram = Datagram.from_bytes(data)
-            ack_payload = ack_datagram.analyze()
-            if not isinstance(ack_payload, DownloadACK):
-                print(ack_payload.msg)
-                return
+        syn_ack = self.handshake(payload, flag)
+        rtt = time() - start
+        self.destination_socket.settimeout(rtt)
+        ack_payload = syn_ack.analyze()
 
-        except socket.timeout:
-            print("TIMEOUT: No se recibió un ACK")
+        if not isinstance(ack_payload, DownloadACK):
+            print(ack_payload.msg)
             return
-        except Exception as e:
-            print(f"Error al recibir ACK: {e}")
-            return
+        filepath = str(Path(self.filepath) / self.filename)
+        queue = Queue(-1)
+        thread = Thread(
+            target=self.enqueue,
+            args=(queue,),
+            daemon=True
+        )
+        thread.start()
+        with open(filepath, "rb") as file:
+            self.recovery_protocol.receive(
+                self, file, queue, ack_payload.filesize, None
+            )
 
-        self.recovery_protocol.receive()
+    def enqueue_incoming_packets(self, queue):
+        while True:
+            data, _ = self.self.destination_socket.recvfrom(MSS + HEADER_SIZE)
+            queue.put(data)

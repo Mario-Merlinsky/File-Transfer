@@ -3,12 +3,9 @@ from threading import Thread
 from .Datagram import Datagram
 from .Flags import Flags
 from .Messages.UploadSYN import UploadSYN
-# from .Messages.DownloadACK import DownloadACK
-# from .Messages.DownloadSYN import DownloadSYN
 from .Messages.UploadACK import UploadACK
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
-# from .Util import read_file
 from pathlib import Path
 
 
@@ -28,7 +25,6 @@ class Server(Endpoint):
         storage_path: str,
     ):
         super().__init__(recovery_protocol, MSS)
-        self.recovery_protocol = recovery_protocol
         self.host = host
         self.port = port
         self.storage_path = storage_path
@@ -74,7 +70,7 @@ class Server(Endpoint):
                 match payload:
                     case UploadSYN():
                         self.handle_upload_syn(
-                            datagram, payload, client_addr, rp)
+                            datagram, payload, rp)
                     # case DownloadSYN():
                     #     self.handle_download_syn(
                     #         datagram, payload, client_addr, rp)

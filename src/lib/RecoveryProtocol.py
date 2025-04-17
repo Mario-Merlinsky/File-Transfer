@@ -1,6 +1,9 @@
+from io import BufferedWriter
+from queue import Queue
 import socket
 from abc import ABC, abstractmethod
 from .ProtocolID import ProtocolID
+from .Datagram import Datagram  # Ensure Datagram is imported or defined
 
 
 class RecoveryProtocol(ABC):
@@ -13,7 +16,14 @@ class RecoveryProtocol(ABC):
         pass
 
     @abstractmethod
-    def receive(self, endpoint) -> bytes:
+    def receive(
+        self,
+        endpoint,
+        file: BufferedWriter,
+        queue: Queue,
+        file_size: int,
+        last_ack: Datagram
+    ) -> bytes:
         pass
 
     @abstractmethod
