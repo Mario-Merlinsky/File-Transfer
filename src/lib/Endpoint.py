@@ -1,20 +1,18 @@
 from typing import Optional
-from lib.Header import Header
+from lib.Header import Header, HEADER_SIZE
 from lib.Datagram import Datagram
 from lib.Flags import Flags
 from .RecoveryProtocol import RecoveryProtocol
 
 INITIAL_ACK_NUMBER = 0
 INITIAL_SEQ_NUMBER = 0
-MSS = 1024
-HEADER_SIZE = 20
 
 
 class Endpoint:
-    def __init__(self, recovery_protocol: RecoveryProtocol):
+    def __init__(self, recovery_protocol: RecoveryProtocol, mss: int):
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
-        self.window_size = (MSS + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+        self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
         self.reciving_queue = []
 
     last_ack: Optional[Datagram] = None

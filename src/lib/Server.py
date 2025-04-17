@@ -1,7 +1,6 @@
 from queue import Queue
 from threading import Thread
 from .Datagram import Datagram
-from .Header import HEADER_SIZE
 from .Flags import Flags
 from .Messages.UploadSYN import UploadSYN
 # from .Messages.DownloadACK import DownloadACK
@@ -17,7 +16,6 @@ from pathlib import Path
 MAX_FILE_SIZE = 26214400
 MSS = 1024
 INITIAL_RTT = 1
-INITIAL_SEQ_NUMBER = 0
 BUFFER_SIZE = 1300
 
 
@@ -29,12 +27,11 @@ class Server(Endpoint):
         port: int,
         storage_path: str,
     ):
-        super().__init__(recovery_protocol)
+        super().__init__(recovery_protocol, MSS)
         self.recovery_protocol = recovery_protocol
         self.host = host
         self.port = port
         self.storage_path = storage_path
-        self.clients = set()
         self.queues = {}  # {Cliente: Queue}
 
     # Este metodo recibe los mensajes de clientes
@@ -49,22 +46,17 @@ class Server(Endpoint):
             args=(client_addr,),
             daemon=True
         )
-        self.clients.add(client_addr)
         self.queues[client_addr] = Queue(-1)
         thread.start()
 
     def start(self):
-        self.seq = INITIAL_SEQ_NUMBER
-        self.window_size = (
-            (MSS + HEADER_SIZE) * self.recovery_protocol.PROTOCOL_ID
-        )
         socket = self.recovery_protocol.socket
         socket.bind((self.host, self.port))
         print("Servidor creado con exito, esperando mensajes de cliente")
 
         while True:
             data, client_addr = socket.recvfrom(BUFFER_SIZE)
-            if client_addr not in self.clients:
+            if client_addr not in self.queues:
                 self.setup_new_client(client_addr)
             self.queues[client_addr].put(data)
 
@@ -94,14 +86,13 @@ class Server(Endpoint):
         self,
         client_datagram: Datagram,
         client_payload: UploadSYN,
-        client_addr: tuple[str, int],
         rp: RecoveryProtocol
     ):
         ack = client_datagram.get_sequence_number() + 1
         error = self.validate_upload_payload(client_payload)
 
         if error is not None:
-            self.send_error_response(error, ack, client_addr, rp)
+            self.send_error_response(error, ack, rp)
             return
 
         file_path = str(Path(self.storage_path) / client_payload.filename)
@@ -112,7 +103,7 @@ class Server(Endpoint):
                 rp.receive(
                     self,
                     file,
-                    self.queues[client_addr],
+                    self.queues[rp.addr],
                     client_payload.file_size,
                     last_ack
                 )
@@ -139,19 +130,18 @@ class Server(Endpoint):
         return datagram
 
     def validate_upload_payload(self, client_payload: UploadSYN):
-        payload = None
-        if client_payload.file_size > MAX_FILE_SIZE:
-            payload = str.encode(
-                "El archivo es demasiado para grande para ser subido"
-            )
         if self.recovery_protocol.PROTOCOL_ID != \
                 client_payload.recovery_protocol:
-            payload = str.encode(
+            return str.encode(
                 "El metodo de recuperacion entre cliente y servidor "
                 "no es consistente"
             )
+        if client_payload.file_size > MAX_FILE_SIZE:
+            return str.encode(
+                "El archivo es demasiado para grande para ser subido"
+            )
 
-        return payload
+        return None
 
     # def handle_download_syn(
     #     self,
@@ -204,17 +194,3 @@ class Server(Endpoint):
     #     rp.socket.sendto(datagram.to_bytes(), rp.addr)
 
     #     return
-
-    def send_error_response(
-        self,
-        message: str,
-        seq_number: int,
-        client_addr: tuple[str, int],
-        rp: RecoveryProtocol
-    ):
-        error_datagram = Datagram.make_error_datagram(
-            INITIAL_SEQ_NUMBER,
-            seq_number,
-            message.encode()
-        )
-        rp.socket.sendto(error_datagram.to_bytes(), client_addr)

@@ -26,7 +26,7 @@ class Client(Endpoint):
         dest_addr: tuple[str, int],
         dest_sock: int,
     ):
-        super().__init__(recovery_protocol)
+        super().__init__(recovery_protocol, MSS)
         self.recovery_protocol = recovery_protocol
         self.filepath = filepath
         self.filename = filename
@@ -43,8 +43,13 @@ class Client(Endpoint):
         )
 
         datagram = Datagram(header, syn_payload).to_bytes()
-        self.destination_socket.sendto(datagram, self.destination_addr)
-        data, _ = self.destination_socket.recvfrom(MSS)
+        try:
+            self.destination_socket.sendto(datagram, self.destination_addr)
+            data, _ = self.destination_socket.recvfrom(MSS)
+
+        except TimeoutError:
+            self.handshake(syn_payload, flags)
+
         return Datagram.from_bytes(data)
 
     def start_upload(self):
@@ -59,10 +64,9 @@ class Client(Endpoint):
                 self.recovery_protocol.PROTOCOL_ID
             ).to_bytes()
 
-            flags = Flags.SYN_UPLOAD
-
+            flag = Flags.SYN_UPLOAD
             start = time()
-            syn_ack = self.handshake(syn_payload, flags)
+            syn_ack = self.handshake(syn_payload, flag)
             end = time()
             rtt = end - start
             self.destination_socket.settimeout(rtt * TIMEOUT_COEFFICIENT)

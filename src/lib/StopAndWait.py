@@ -8,9 +8,6 @@ from .RecoveryProtocol import RecoveryProtocol
 from .ProtocolID import ProtocolID
 from .Endpoint import Endpoint
 
-INITIAL_RTT = 1
-TIMEOUT_COEFFICIENT = 1.5
-
 
 class StopAndWait(RecoveryProtocol):
     PROTOCOL_ID = ProtocolID.STOP_AND_WAIT
@@ -92,7 +89,7 @@ class StopAndWait(RecoveryProtocol):
 
         while bytes_written < file_size:
             try:
-                data = queue.get(timeout=INITIAL_RTT * TIMEOUT_COEFFICIENT * 2)
+                data = queue.get()
                 datagram = Datagram.from_bytes(data)
 
                 if datagram.is_fin():
@@ -125,3 +122,11 @@ class StopAndWait(RecoveryProtocol):
                 raise
 
         file.close()
+
+    def send_error_response(self, message: str, ack_number: int):
+        error_datagram = Datagram.make_error_datagram(
+                self.seq,
+                ack_number,
+                message.encode()
+            )
+        self.socket.sendto(error_datagram.to_bytes(), self.addr)
