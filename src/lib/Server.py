@@ -75,6 +75,8 @@ class Server(Endpoint):
                 datagram = Datagram.from_bytes(data)
                 payload = datagram.analyze()
 
+                print(data)
+
                 match payload:
                     case UploadSYN():
                         filename, file_size = self.handle_upload_syn(

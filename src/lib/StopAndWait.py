@@ -33,16 +33,18 @@ class StopAndWait(RecoveryProtocol):
         for i in range(0, len(file_data), receiver_mss):
             segment = file_data[i:i + receiver_mss]
             endpoint.increment_seq()
+
+            data = Upload(endpoint.seq, segment).to_bytes()
+
             header = Header(
-                len(segment),
+                len(data),
                 endpoint.window_size,
                 endpoint.seq,
                 endpoint.ack,
                 Flags.UPLOAD
             )
 
-            data = Upload(endpoint.seq, segment)
-            datagram = Datagram(header, data.to_bytes())
+            datagram = Datagram(header, data)
 
             while True:
                 try:
@@ -82,13 +84,15 @@ class StopAndWait(RecoveryProtocol):
                 data = queue.get()
                 datagram = Datagram.from_bytes(data)
 
+                upload_payload = Upload.from_bytes(datagram.data)
+
                 if datagram.get_sequence_number()-1 == endpoint.ack:
                     endpoint.increment_seq()
                     endpoint.increment_ack()
 
-                    payload_size = datagram.get_payload_size()
-                    file.write(datagram.data[:payload_size])
-                    bytes_written += payload_size
+                    file.write(upload_payload.data)
+                    bytes_written += len(upload_payload.data)
+                    endpoint.ack = upload_payload.sequence_number
 
                     ack_header = Header(
                         payload_size=0,
