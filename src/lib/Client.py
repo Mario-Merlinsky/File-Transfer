@@ -1,4 +1,6 @@
 from pathlib import Path
+from socket import socket
+from socket import timeout
 from time import time
 from threading import Thread
 from queue import Queue
@@ -27,15 +29,18 @@ class Client:
         recovery_protocol: RecoveryProtocol,
         filepath: str,
         filename: str,
+        remote_addr: tuple[str, int],
+        socket: socket
     ):
-        self.endpoint = Endpoint(recovery_protocol, MSS)
+        self.endpoint = Endpoint(recovery_protocol, MSS, socket, remote_addr)
         self.filepath = filepath
         self.filename = filename
+        self.rp = recovery_protocol
 
     def handshake(self, syn_payload, flags: Flags):
         header = Header(
             len(syn_payload),
-            (MSS + HEADER_SIZE) * self.endpoint.recovery_protocol.PROTOCOL_ID,
+            (MSS + HEADER_SIZE) * self.rp.PROTOCOL_ID,
             INITIAL_SEQ_NUMBER,
             INITIAL_ACK_NUMBER,
             flags,
@@ -43,13 +48,8 @@ class Client:
 
         datagram = Datagram(header, syn_payload).to_bytes()
         try:
-            self.endpoint.recovery_protocol.socket.sendto(
-                datagram,
-                self.endpoint.recovery_protocol.addr
-            )
-            data, _ = self.endpoint.recovery_protocol.socket.recvfrom(
-                MSS + HEADER_SIZE
-            )
+            self.endpoint.send_message(datagram)
+            data = self.endpoint.receive_message(MSS + HEADER_SIZE)
 
         except TimeoutError:
             self.handshake(syn_payload, flags)
@@ -58,47 +58,49 @@ class Client:
 
     def start_upload(self):
         file_data = read_file(self.filepath)
-        self.endpoint.recovery_protocol.socket.settimeout(INITIAL_RTT)
+        self.endpoint.set_timeout(INITIAL_RTT)
 
         syn_payload = UploadSYN(
             self.filename,
             len(file_data),
             MSS,
-            self.endpoint.recovery_protocol.PROTOCOL_ID
+            self.rp.PROTOCOL_ID
         ).to_bytes()
 
         flag = Flags.SYN_UPLOAD
         start = time()
         syn_ack = self.handshake(syn_payload, flag)
         rtt = time() - start
-        self.endpoint.recovery_protocol.socket.settimeout(
-            rtt * TIMEOUT_COEFFICIENT
-        )
+        self.endpoint.set_timeout(rtt * TIMEOUT_COEFFICIENT)
 
         ack_payload = syn_ack.analyze()
 
         if not isinstance(ack_payload, UploadACK):
             print(ack_payload.msg)
             return
-
-        self.endpoint.recovery_protocol.send(
-            self, file_data, ack_payload.mss, Flags.UPLOAD
+        queue = Queue(-1)
+        thread = Thread(
+            target=self.enqueue_incoming_packets,
+            args=(queue,),
+            daemon=True
+        )
+        thread.start()
+        self.rp.send(
+            self.endpoint, file_data, queue, ack_payload.mss, Flags.UPLOAD
         )
 
     def start_download(self):
-        self.endpoint.recovery_protocol.socket.settimeout(INITIAL_RTT)
+        self.endpoint.set_timeout(INITIAL_RTT)
         payload = DownloadSYN(
             self.filename,
             MSS,
-            self.endpoint.recovery_protocol.PROTOCOL_ID
+            self.rp.PROTOCOL_ID
         ).to_bytes()
         flag = Flags.SYN_DOWNLOAD
         start = time()
         syn_ack = self.handshake(payload, flag)
         rtt = time() - start
-        self.endpoint.recovery_protocol.socket.settimeout(
-            rtt * TIMEOUT_COEFFICIENT
-        )
+        self.endpoint.set_timeout(rtt * TIMEOUT_COEFFICIENT)
         ack_payload = syn_ack.analyze()
 
         if not isinstance(ack_payload, DownloadACK):
@@ -113,15 +115,20 @@ class Client:
         )
         thread.start()
         with open(filepath, "wb") as file:
-            self.endpoint.recovery_protocol.receive(
+            self.rp.receive(
                 self.endpoint, file, queue, ack_payload.filesize
             )
 
+        print("Descarga finalizada con exito")
+
     def enqueue_incoming_packets(self, queue):
         while True:
-            data, _ = self.endpoint.recovery_protocol.socket.recvfrom(
-                MSS + HEADER_SIZE
-            )
+            try:
+                data = self.endpoint.receive_message(MSS + HEADER_SIZE)
+            except timeout:
+                header = Header(0, 0, 0, 0, Flags.ERROR)
+                payload = b'0'
+                data = Datagram(header, payload).to_bytes()
             queue.put(data)
 
 

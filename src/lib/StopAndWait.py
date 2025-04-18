@@ -20,6 +20,7 @@ class StopAndWait(RecoveryProtocol):
         self,
         endpoint: Endpoint,
         file_data: bytes,
+        queue: Queue,
         receiver_mss: int,
         flag: Flags
     ):
@@ -50,14 +51,13 @@ class StopAndWait(RecoveryProtocol):
                 flag
             )
 
-            datagram = Datagram(header, data)
+            datagram = Datagram(header, data).to_bytes()
 
             while True:
                 try:
-                    self.socket.sendto(datagram.to_bytes(), self.addr)
+                    endpoint.send_message(datagram)
                     print(f"mande paquete con seq = {header.sequence_number}")
-                    response_data, _ = self.socket.recvfrom(
-                        endpoint.window_size)
+                    response_data = queue.get()
 
                     response_datagram = Datagram.from_bytes(response_data)
 
@@ -85,11 +85,10 @@ class StopAndWait(RecoveryProtocol):
         file_size: int,
     ):
         bytes_written = 0
-        print("endpoint")
-        print(f"{endpoint.ack, endpoint.seq, endpoint.window_size}")
         while bytes_written < file_size:
             try:
                 data = queue.get()
+
                 datagram = Datagram.from_bytes(data)
                 received_payload = Data.from_bytes(datagram.data)
                 if datagram.get_sequence_number()-1 == endpoint.ack:
@@ -107,11 +106,11 @@ class StopAndWait(RecoveryProtocol):
                         acknowledgment_number=endpoint.ack,
                         flags=Flags.ACK
                     )
-                    endpoint.last_ack = Datagram(ack_header, b'')
-                    self.socket.sendto(endpoint.last_ack.to_bytes(), self.addr)
+                    ack = Datagram(ack_header, b'')
+                    endpoint.last_ack = ack
+                    endpoint.send_message(ack.to_bytes())
                 else:
-                    self.socket.sendto(endpoint.last_ack.to_bytes(), self.addr)
-
+                    endpoint.send_message(endpoint.last_ack.to_bytes())
             except Exception as e:
                 print(f"Error en recepción: {e}")
                 raise

@@ -36,13 +36,15 @@ def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     match args.protocol:
         case 'GBN':
-            recovery_protocol = GoBackN(sock, addr)
+            recovery_protocol = GoBackN()
         case 'SW':
-            recovery_protocol = StopAndWait(sock, addr)
+            recovery_protocol = StopAndWait()
     client = Client(
         recovery_protocol,
         args.dst,
-        args.name
+        args.name,
+        addr,
+        sock
     )
     client.start_download()
 
