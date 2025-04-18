@@ -16,7 +16,14 @@ class GoBackN(RecoveryProtocol):
     def copy(self) -> 'GoBackN':
         return GoBackN(self.socket, self.addr)
 
-    def send(self, endpoint: Endpoint, file_data: bytes, receiver_mss: int):
+    def send(
+        self,
+        endpoint: Endpoint,
+        file_data: bytes,
+        queue: Queue,
+        receiver_mss: int,
+        flag: Flags
+    ):
         base = endpoint.seq
         next_seq = base
         buffer = {}
@@ -38,16 +45,16 @@ class GoBackN(RecoveryProtocol):
                     acknowledgment_number=endpoint.ack,
                     flags=Flags.UPLOAD
                 )
-                datagram = Datagram(header, segment)
+                datagram = Datagram(header, segment).to_bytes()
                 buffer[next_seq] = datagram
 
-                self.socket.sendto(datagram.to_bytes(), self.addr)
+                endpoint.send_message(datagram)
                 print(f"[SEND] Paquete enviado: Seq={next_seq}, Tamaño={len(segment)} bytes")
                 next_seq += 1
 
             try:
-                self.socket.settimeout(2.0)
-                response_data, _ = self.socket.recvfrom(1024)
+                response_data = queue.get()
+
                 response_datagram = Datagram.from_bytes(response_data)
 
                 if response_datagram.is_ack():
@@ -65,7 +72,7 @@ class GoBackN(RecoveryProtocol):
                 print("Timeout esperando ACK, reenviando ventana")
                 for seq in range(base, next_seq):
                     if seq in buffer:
-                        self.socket.sendto(buffer[seq].to_bytes(), self.addr)
+                        endpoint.send_message(buffer[seq])
                         print(f"Reenviado paquete: {seq}")
 
     def receive(
@@ -99,7 +106,7 @@ class GoBackN(RecoveryProtocol):
                             flags=Flags.ACK
                         )
                         ack_datagram = Datagram(ack_header, b'')
-                        self.socket.sendto(ack_datagram.to_bytes(), self.addr)
+                        endpoint.send_message(ack_datagram.to_bytes())
                         print(f"[SEND] ACK enviado acumulativo: {endpoint.ack}")
                 else:
                     print(f"[RECEIVE] Paquete fuera de orden: Seq={datagram.get_sequence_number()}")
