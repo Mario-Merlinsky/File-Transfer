@@ -20,10 +20,14 @@ class Endpoint:
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
         if recovery_protocol.PROTOCOL_ID == 1:
-            self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+            self.window_size = (
+                (mss + HEADER_SIZE)
+                * recovery_protocol.PROTOCOL_ID
+            )
         else:
             self.window_size = recovery_protocol.PROTOCOL_ID
-        # self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+        # self.window_size =
+        # (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
         self.socket = socket
         self.remote_addr = remote_addr
 
