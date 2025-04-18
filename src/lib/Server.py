@@ -115,7 +115,7 @@ class Server:
             header,
             payload
         )
-        endp.last_ack = ack
+        endp.last_msg = ack
 
         endp.send_message(ack.to_bytes())
         return client_payload.filename, client_payload.file_size
@@ -222,9 +222,10 @@ class Server:
         datagram = Datagram(
             header,
             payload
-        ).to_bytes()
+        )
+        endpoint.last_msg = datagram
 
-        endpoint.send_message(datagram)
+        endpoint.send_message(datagram.to_bytes())
 
         return file_data
 

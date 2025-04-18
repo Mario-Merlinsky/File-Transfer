@@ -37,24 +37,25 @@ class Client:
         self.filename = filename
         self.rp = recovery_protocol
 
-    def handshake(self, syn_payload, flags: Flags):
+    def handshake(self, syn_payload, flag: Flags):
         header = Header(
             len(syn_payload),
             (MSS + HEADER_SIZE) * self.rp.PROTOCOL_ID,
             INITIAL_SEQ_NUMBER,
             INITIAL_ACK_NUMBER,
-            flags,
+            flag,
         )
 
         datagram = Datagram(header, syn_payload).to_bytes()
         try:
             self.endpoint.send_message(datagram)
             data = self.endpoint.receive_message(MSS + HEADER_SIZE)
-
-        except TimeoutError:
-            self.handshake(syn_payload, flags)
-
-        return Datagram.from_bytes(data)
+            response = Datagram.from_bytes(data).analyze()
+            if handshake_is_valid(response, flag):
+                return response
+            self.handshake(syn_payload, flag)
+        except timeout:
+            self.handshake(syn_payload, flag)
 
     def start_upload(self):
         file_data = read_file(self.filepath)
@@ -132,16 +133,9 @@ class Client:
             queue.put(data)
 
 
-def archivos_iguales(path1, path2):
-    with open(path1, 'rb') as f1, open(path2, 'rb') as f2:
-        while True:
-            b1 = f1.read(4096)
-            b2 = f2.read(4096)
-            if b1 != b2:
-                print("los archivos no son iguales")
-                print(b1, b2)
-                return
-            if not b1:  # Ambos llegaron al final
-                break
-        print("los archivos son iguales")
-        return
+def handshake_is_valid(response: Datagram, flag: Flags):
+    if not (isinstance(response, DownloadACK) and flag == Flags.SYN_DOWNLOAD):
+        return False
+    if not (isinstance(response, UploadACK) and flag == Flags.SYN_UPLOAD):
+        return False
+    return True

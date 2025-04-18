@@ -68,6 +68,9 @@ class StopAndWait(RecoveryProtocol):
                         print(f"ACK recibido: {endpoint.seq}")
                         endpoint.increment_ack()
                         break
+                    else:
+                        endpoint.send_message(endpoint.last_msg)
+                        continue
 
                 except socket.timeout:
                     print("Timeout esperando ACK")
@@ -91,6 +94,8 @@ class StopAndWait(RecoveryProtocol):
 
                 datagram = Datagram.from_bytes(data)
                 received_payload = Data.from_bytes(datagram.data)
+                if datagram.get_sequence_number()-1 > endpoint.ack():
+                    continue
                 if datagram.get_sequence_number()-1 == endpoint.ack:
                     endpoint.increment_seq()
                     endpoint.increment_ack()
@@ -107,10 +112,10 @@ class StopAndWait(RecoveryProtocol):
                         flags=Flags.ACK
                     )
                     ack = Datagram(ack_header, b'')
-                    endpoint.last_ack = ack
+                    endpoint.last_msg = ack
                     endpoint.send_message(ack.to_bytes())
                 else:
-                    endpoint.send_message(endpoint.last_ack.to_bytes())
+                    endpoint.send_message(endpoint.last_msg.to_bytes())
             except Exception as e:
                 print(f"Error en recepción: {e}")
                 raise

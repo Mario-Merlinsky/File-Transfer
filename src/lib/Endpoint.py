@@ -22,8 +22,9 @@ class Endpoint:
         self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
         self.socket = socket
         self.remote_addr = remote_addr
+        self.last_msg = None
 
-    last_ack: Optional[Datagram] = None
+    last_msg: Optional[Datagram]
 
     def increment_seq(self, value: int = 1):
         self.seq += value
@@ -34,8 +35,8 @@ class Endpoint:
     def update_window_size(self, new_size: int):
         self.window_size = new_size
 
-    def update_last_ack(self, ack_datagram: Datagram):
-        self.last_ack = ack_datagram
+    def update_last_msg(self, ack_datagram: Datagram):
+        self.last_msg = ack_datagram
 
     def send_message(self, data: bytes):
         self.socket.sendto(data, self.remote_addr)
