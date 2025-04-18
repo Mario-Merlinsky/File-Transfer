@@ -1,11 +1,12 @@
+from io import BufferedWriter
 import socket
+from queue import Queue, Empty
 from .Header import Header
 from .Flags import Flags
 from .Datagram import Datagram
 from .RecoveryProtocol import RecoveryProtocol
 from .ProtocolID import ProtocolID
 from .Endpoint import Endpoint
-from queue import Empty
 from math import ceil
 
 
