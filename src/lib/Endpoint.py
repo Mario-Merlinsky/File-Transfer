@@ -12,7 +12,10 @@ class Endpoint:
     def __init__(self, recovery_protocol: RecoveryProtocol, mss: int):
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
-        self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+        if recovery_protocol.PROTOCOL_ID == 1:
+            self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+        else:
+            self.window_size = recovery_protocol.PROTOCOL_ID
         self.recovery_protocol = recovery_protocol
 
     last_ack: Optional[Datagram] = None

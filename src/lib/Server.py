@@ -36,6 +36,13 @@ class Server(Endpoint):
         self.storage_path = storage_path
         self.queues = {}  # {Cliente: Queue}
 
+        storage_dir = Path(storage_path)
+        if not storage_dir.exists():
+            storage_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Directorio {storage_path} creado con exito")
+        else:
+            print(f"Directorio {storage_path} ya existe")
+
     # Este metodo recibe los mensajes de clientes
     # Si el cliente es nuevo, se genera un thread para que maneje
     # sus mensajes entrantes
@@ -75,7 +82,7 @@ class Server(Endpoint):
                 datagram = Datagram.from_bytes(data)
                 payload = datagram.analyze()
 
-                print(data)
+                # print(data)
 
                 match payload:
                     case UploadSYN():

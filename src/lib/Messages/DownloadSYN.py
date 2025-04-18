@@ -19,12 +19,12 @@ class DownloadSYN(Message):
         return syn_segment
 
     def from_bytes(bytes: bytes) -> 'DownloadSYN':
-        filename_lenght = int.from_bytes(bytes[0:2])
+        filename_lenght = int.from_bytes(bytes[0:2], byteorder='big')
         bytes = bytes[2:]
         filename = bytes[:filename_lenght].decode('utf-8')
         bytes = bytes[filename_lenght:]
-        mss = int.from_bytes(bytes[:2])
+        mss = int.from_bytes(bytes[:2], byteorder='big')
         bytes = bytes[2:]
-        recovery_protocol = int.from_bytes(bytes[:2])
+        recovery_protocol = int.from_bytes(bytes[:2], byteorder='big')
 
         return DownloadSYN(filename, mss, recovery_protocol)

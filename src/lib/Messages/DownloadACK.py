@@ -15,8 +15,8 @@ class DownloadACK(Message):
 
     @staticmethod
     def from_bytes(bytes: bytes) -> 'DownloadACK':
-        filesize = int.from_bytes(bytes[0:4])
+        filesize = int.from_bytes(bytes[0:4], byteorder='big')
         bytes = bytes[4:]
-        mss = int.from_bytes(bytes[:2])
+        mss = int.from_bytes(bytes[:2], byteorder='big')
 
         return DownloadACK(filesize, mss)
