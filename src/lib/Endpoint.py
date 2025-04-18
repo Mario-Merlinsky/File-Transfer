@@ -1,7 +1,6 @@
 from typing import Optional
-from lib.Header import Header, HEADER_SIZE
+from lib.Header import HEADER_SIZE
 from lib.Datagram import Datagram
-from lib.Flags import Flags
 from .RecoveryProtocol import RecoveryProtocol
 
 INITIAL_ACK_NUMBER = 0
@@ -28,12 +27,3 @@ class Endpoint:
 
     def update_last_ack(self, ack_datagram: Datagram):
         self.last_ack = ack_datagram
-
-    def create_ack_header(self, flags: Flags = Flags.ACK) -> Header:
-        return Header(
-            payload_size=0,
-            window_size=self.window_size,
-            sequence_number=self.seq,
-            acknowledgment_number=self.ack,
-            flags=flags
-        )

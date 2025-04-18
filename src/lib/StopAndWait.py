@@ -1,13 +1,13 @@
 from io import BufferedWriter
 import socket
-from queue import Queue, Empty
+from queue import Queue
 from .Header import Header
 from .Flags import Flags
 from .Datagram import Datagram
 from .RecoveryProtocol import RecoveryProtocol
 from .ProtocolID import ProtocolID
 from .Endpoint import Endpoint
-from .Messages.Upload import Upload
+from .Messages.Data import Data
 
 
 class StopAndWait(RecoveryProtocol):
@@ -16,8 +16,14 @@ class StopAndWait(RecoveryProtocol):
     def copy(self) -> 'StopAndWait':
         return StopAndWait(self.socket, self.addr)
 
-    def send(self, endpoint: Endpoint, file_data: bytes, receiver_mss: int):
-
+    def send(
+        self,
+        endpoint: Endpoint,
+        file_data: bytes,
+        receiver_mss: int,
+        flag: Flags
+    ):
+        print("Arranca el send")
         # Caso favorable: Manda un data segment, le llega un ACK de este data
         # segment
 
@@ -34,14 +40,14 @@ class StopAndWait(RecoveryProtocol):
             segment = file_data[i:i + receiver_mss]
             endpoint.increment_seq()
 
-            data = Upload(endpoint.seq, segment).to_bytes()
+            data = Data(segment).to_bytes()
 
             header = Header(
                 len(data),
                 endpoint.window_size,
                 endpoint.seq,
                 endpoint.ack,
-                Flags.UPLOAD
+                flag
             )
 
             datagram = Datagram(header, data)
@@ -49,6 +55,7 @@ class StopAndWait(RecoveryProtocol):
             while True:
                 try:
                     self.socket.sendto(datagram.to_bytes(), self.addr)
+                    print(f"mande paquete con seq = {header.sequence_number}")
                     response_data, _ = self.socket.recvfrom(
                         endpoint.window_size)
 
@@ -78,21 +85,20 @@ class StopAndWait(RecoveryProtocol):
         file_size: int,
     ):
         bytes_written = 0
-
+        print("endpoint")
+        print(f"{endpoint.ack, endpoint.seq, endpoint.window_size}")
         while bytes_written < file_size:
             try:
                 data = queue.get()
                 datagram = Datagram.from_bytes(data)
-
-                upload_payload = Upload.from_bytes(datagram.data)
-
+                received_payload = Data.from_bytes(datagram.data)
                 if datagram.get_sequence_number()-1 == endpoint.ack:
                     endpoint.increment_seq()
                     endpoint.increment_ack()
 
-                    file.write(upload_payload.data)
-                    bytes_written += len(upload_payload.data)
-                    endpoint.ack = upload_payload.sequence_number
+                    file.write(received_payload.data)
+                    bytes_written += len(received_payload.data)
+                    endpoint.ack = datagram.get_sequence_number()
 
                     ack_header = Header(
                         payload_size=0,
@@ -106,9 +112,6 @@ class StopAndWait(RecoveryProtocol):
                 else:
                     self.socket.sendto(endpoint.last_ack.to_bytes(), self.addr)
 
-            except Empty:
-                print("Timeout esperando paquete, terminando recepción")
-                break
             except Exception as e:
                 print(f"Error en recepción: {e}")
                 raise

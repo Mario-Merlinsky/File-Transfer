@@ -11,7 +11,7 @@ class RecoveryProtocol(ABC):
         self.addr = addr
 
     @abstractmethod
-    def send(self, endpoint, data: bytes, mss: int):
+    def send(self, endpoint, data: bytes, receiver_mss: int):
         pass
 
     @abstractmethod
