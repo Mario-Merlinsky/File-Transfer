@@ -1,17 +1,14 @@
 from io import BufferedWriter
 from queue import Queue
-import socket
 from abc import ABC, abstractmethod
 from .ProtocolID import ProtocolID
+from .Flags import Flags
 
 
 class RecoveryProtocol(ABC):
-    def __init__(self, socket: socket.socket, addr: tuple[str, int] = None):
-        self.socket = socket
-        self.addr = addr
 
     @abstractmethod
-    def send(self, endpoint, data: bytes, mss: int):
+    def send(self, endpoint, data: bytes, receiver_mss: int):
         pass
 
     @abstractmethod
@@ -20,8 +17,9 @@ class RecoveryProtocol(ABC):
         endpoint,
         file: BufferedWriter,
         queue: Queue,
-        file_size: int
-    ) -> bytes:
+        file_size: int,
+        flag: Flags
+    ):
         pass
 
     @abstractmethod

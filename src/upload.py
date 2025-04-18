@@ -36,9 +36,9 @@ def main():
     addr = (args.host, args.port)
     match args.protocol:
         case 'GBN':
-            recovery_protocol = GoBackN(sock, addr)
+            recovery_protocol = GoBackN()
         case 'SW':
-            recovery_protocol = StopAndWait(sock, addr)
+            recovery_protocol = StopAndWait()
     client = Client(
         recovery_protocol,
         args.src,

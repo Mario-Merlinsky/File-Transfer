@@ -40,12 +40,14 @@ def main():
     args = parser.parse_args()
     recovery_protocol = None
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    address = (args.host, args.port)
+    sock.bind(address)
     match args.protocol:
         case 'GBN':
-            recovery_protocol = GoBackN(sock)
+            recovery_protocol = GoBackN()
         case 'SW':
-            recovery_protocol = StopAndWait(sock)
-    serv = Server(recovery_protocol, args.host, args.port, args.storage)
+            recovery_protocol = StopAndWait()
+    serv = Server(recovery_protocol, address, args.storage, sock)
     serv.start()
 # setear log con modo verbose o quiet
 
