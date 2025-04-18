@@ -4,6 +4,9 @@ from .Datagram import Datagram
 from .Flags import Flags
 from .Messages.UploadSYN import UploadSYN
 from .Messages.UploadACK import UploadACK
+from .Messages.Upload import Upload
+from .Messages.DownloadSYN import DownloadSYN
+from .Header import Header
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from pathlib import Path
@@ -14,6 +17,9 @@ MAX_FILE_SIZE = 26214400
 MSS = 1024
 INITIAL_RTT = 1
 BUFFER_SIZE = 1300
+
+global contador
+contador = 0
 
 
 class Server(Endpoint):
@@ -60,6 +66,8 @@ class Server(Endpoint):
         rp = self.recovery_protocol.copy()
         rp.addr = client_addr
         queue = self.queues[client_addr]
+        filename = None
+        file_size = None
 
         while True:
             try:
@@ -69,11 +77,13 @@ class Server(Endpoint):
 
                 match payload:
                     case UploadSYN():
-                        self.handle_upload_syn(
+                        filename, file_size = self.handle_upload_syn(
                             datagram, payload, rp)
-                    # case DownloadSYN():
-                    #     self.handle_download_syn(
-                    #         datagram, payload, client_addr, rp)
+                    case Upload():
+                        self.handle_upload(filename, file_size, rp)
+                    case DownloadSYN():
+                        self.handle_download_syn(
+                            datagram, payload, client_addr, rp)
             except Exception as e:
                 print(f"Error al manejar el cliente {client_addr}: {e}")
                 break
@@ -84,46 +94,53 @@ class Server(Endpoint):
         client_payload: UploadSYN,
         rp: RecoveryProtocol
     ):
-        ack = client_datagram.get_sequence_number() + 1
+        ack = client_datagram.get_sequence_number()
         error = self.validate_upload_payload(client_payload)
 
         if error is not None:
             self.send_error_response(error, ack, rp)
             return
 
-        file_path = str(Path(self.storage_path) / client_payload.filename)
+        ack_payload = UploadACK(MSS)
+        payload_bytes = ack_payload.to_bytes()
+
+        header = Header(
+            payload_size=len(payload_bytes),
+            window_size=self.window_size,
+            sequence_number=self.seq,
+            acknowledgment_number=ack,
+            flags=Flags.ACK_UPLOAD
+        )
+
+        self.last_ack = Datagram(
+            header,
+            payload_bytes
+        )
+
+        rp.socket.sendto(self.last_ack.to_bytes(), rp.addr)
+
+        return client_payload.filename, client_payload.file_size
+
+    def handle_upload(
+        self,
+        filename: str,
+        file_size: int,
+        rp: RecoveryProtocol
+    ):
+
+        file_path = str(Path(self.storage_path) / filename)
         try:
-            last_ack = self.send_upload_ack(rp)
             print("Enviando ACK de subida")
             with open(file_path, "wb") as file:
                 rp.receive(
                     self,
                     file,
                     self.queues[rp.addr],
-                    client_payload.file_size,
-                    last_ack
+                    file_size
                 )
         except Exception as e:
             print(f"Error durante la recepción del archivo: {e}")
             Path(file_path).unlink(missing_ok=True)
-
-    def send_upload_ack(
-        self,
-        rp: RecoveryProtocol,
-    ) -> Datagram:
-        payload = UploadACK(MSS).to_bytes()
-        header = self.create_ack_header(Flags.ACK_UPLOAD)
-
-        header.acknowledgment_number = self.ack
-        header.payload_size = len(payload)
-
-        datagram = Datagram(header=header, data=payload)
-        rp.socket.sendto(datagram.to_bytes(), rp.addr)
-
-        self.increment_seq()
-        self.update_last_ack(datagram)
-
-        return datagram
 
     def validate_upload_payload(self, client_payload: UploadSYN):
         if self.recovery_protocol.PROTOCOL_ID != \

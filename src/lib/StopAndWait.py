@@ -1,12 +1,13 @@
 from io import BufferedWriter
 import socket
-from queue import Queue
+from queue import Queue, Empty
 from .Header import Header
 from .Flags import Flags
 from .Datagram import Datagram
 from .RecoveryProtocol import RecoveryProtocol
 from .ProtocolID import ProtocolID
 from .Endpoint import Endpoint
+from .Messages.Upload import Upload
 
 
 class StopAndWait(RecoveryProtocol):
@@ -31,6 +32,7 @@ class StopAndWait(RecoveryProtocol):
 
         for i in range(0, len(file_data), receiver_mss):
             segment = file_data[i:i + receiver_mss]
+            endpoint.increment_seq()
             header = Header(
                 len(segment),
                 endpoint.window_size,
@@ -38,33 +40,23 @@ class StopAndWait(RecoveryProtocol):
                 endpoint.ack,
                 Flags.UPLOAD
             )
-            datagram = Datagram(header, data=segment)
+
+            data = Upload(endpoint.seq, segment)
+            datagram = Datagram(header, data.to_bytes())
 
             while True:
                 try:
-                    print(
-                            f"Enviando datagrama con: seq={endpoint.seq} "
-                            f"ack={endpoint.ack} wdw={endpoint.window_size}"
-                        )
                     self.socket.sendto(datagram.to_bytes(), self.addr)
                     response_data, _ = self.socket.recvfrom(
-                        endpoint.window_size)  # Me quede aca
+                        endpoint.window_size)
+
                     response_datagram = Datagram.from_bytes(response_data)
 
-                    print(
-                        f"Recibiendo datagrama con: seq={
-                            response_datagram.get_sequence_number()} "
-                        f"ack={response_datagram.get_ack_number()} "
-                    )
-
-                    print(endpoint.seq)
-                    print(endpoint.seq == response_datagram.get_ack_number())
-
                     if response_datagram.is_ack() and \
-                            response_datagram.get_ack_number() == endpoint.seq:
+                            (response_datagram.get_ack_number()
+                                == endpoint.seq):
 
                         print(f"ACK recibido: {endpoint.seq}")
-                        endpoint.increment_seq()
                         endpoint.increment_ack()
                         break
 
@@ -82,42 +74,39 @@ class StopAndWait(RecoveryProtocol):
         file: BufferedWriter,
         queue: Queue,
         file_size: int,
-        last_ack: Datagram
     ):
         bytes_written = 0
+
         while bytes_written < file_size:
             try:
                 data = queue.get()
                 datagram = Datagram.from_bytes(data)
 
-                if datagram.is_fin():
-                    break
+                if datagram.get_sequence_number()-1 == endpoint.ack:
+                    endpoint.increment_seq()
+                    endpoint.increment_ack()
 
-                current_seq = datagram.get_sequence_number()
-                print(f"el datagrama que me llego tiene seq = {current_seq}")
-                print(f"ack: {endpoint.ack}")
-
-                if current_seq == endpoint.ack:
-                    print("me llego el paquete que esperaba")
                     payload_size = datagram.get_payload_size()
                     file.write(datagram.data[:payload_size])
                     bytes_written += payload_size
-                    endpoint.increment_seq()
 
-                    ack_header = endpoint.create_ack_header()
-
-                    last_ack = Datagram(ack_header, b'0')
-                    self.socket.sendto(last_ack.to_bytes(), self.addr)
+                    ack_header = Header(
+                        payload_size=0,
+                        window_size=endpoint.window_size,
+                        sequence_number=datagram.get_sequence_number(),
+                        acknowledgment_number=endpoint.ack,
+                        flags=Flags.ACK
+                    )
+                    endpoint.last_ack = Datagram(ack_header, b'')
+                    self.socket.sendto(endpoint.last_ack.to_bytes(), self.addr)
                 else:
-                    # Reenviar último ACK
-                    print("reenvio ack porque no me llego el que esperaba")
-                    self.socket.sendto(last_ack.to_bytes(), self.addr)
+                    self.socket.sendto(endpoint.last_ack.to_bytes(), self.addr)
 
-            except queue.Empty:
-                print("Timeout esperando paquete")
+            except Empty:
+                print("Timeout esperando paquete, terminando recepción")
                 break
             except Exception as e:
-                print(f"Error durante recepción: {e}")
+                print(f"Error en recepción: {e}")
                 raise
 
         file.close()

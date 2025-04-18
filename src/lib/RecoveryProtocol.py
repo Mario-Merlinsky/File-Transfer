@@ -3,7 +3,6 @@ from queue import Queue
 import socket
 from abc import ABC, abstractmethod
 from .ProtocolID import ProtocolID
-from .Datagram import Datagram  # Ensure Datagram is imported or defined
 
 
 class RecoveryProtocol(ABC):
@@ -21,8 +20,7 @@ class RecoveryProtocol(ABC):
         endpoint,
         file: BufferedWriter,
         queue: Queue,
-        file_size: int,
-        last_ack: Datagram
+        file_size: int
     ) -> bytes:
         pass
 
