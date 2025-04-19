@@ -53,12 +53,11 @@ class Client:
             response = Datagram.from_bytes(data)
             if response.is_error():
                 print(response.analyze().msg)
-                return
             if handshake_is_valid(response.analyze(), flag):
                 return response
-            self.handshake(syn_payload, flag)
+            return self.handshake(syn_payload, flag)
         except timeout:
-            self.handshake(syn_payload, flag)
+            return self.handshake(syn_payload, flag)
 
     def start_upload(self):
         file_data = read_file(self.filepath)

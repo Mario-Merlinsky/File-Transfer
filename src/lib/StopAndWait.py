@@ -99,9 +99,10 @@ class StopAndWait(RecoveryProtocol):
                 data = queue.get()
 
                 datagram = Datagram.from_bytes(data)
+                print(f"me llego paquete con seq = {datagram.get_sequence_number()}")
+                print(f"esperaba el {endpoint.ack + 1}")
                 received_payload = Data.from_bytes(datagram.data)
-                if datagram.get_sequence_number()-1 < endpoint.ack:
-                    continue
+
                 if datagram.get_sequence_number()-1 == endpoint.ack:
                     endpoint.increment_seq()
                     endpoint.increment_ack()
