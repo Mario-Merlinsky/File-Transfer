@@ -57,17 +57,23 @@ class StopAndWait(RecoveryProtocol):
                 try:
                     endpoint.send_message(datagram)
                     print(f"mande paquete con seq = {header.sequence_number}")
+                    print(f"cola: {len(queue.queue)}")
                     response_data = queue.get()
 
                     response_datagram = Datagram.from_bytes(response_data)
 
-                    if response_datagram.is_ack() and \
-                            (response_datagram.get_ack_number()
-                                == endpoint.seq):
+                    print(f"flag: {response_datagram.header.flags}")
+                    if response_datagram.is_error():
+                        continue
 
-                        print(f"ACK recibido: {endpoint.seq}")
-                        endpoint.increment_ack()
-                        break
+                    if response_datagram.is_ack():
+                        if response_datagram.get_ack_number() == endpoint.seq:
+                            print(f"ACK recibido: {endpoint.seq}")
+                            endpoint.increment_ack()
+                            endpoint.last_msg = datagram
+                            break
+                        if response_datagram.get_ack_number() < endpoint.seq:
+                            continue
                     else:
                         endpoint.send_message(endpoint.last_msg)
                         continue
@@ -94,7 +100,7 @@ class StopAndWait(RecoveryProtocol):
 
                 datagram = Datagram.from_bytes(data)
                 received_payload = Data.from_bytes(datagram.data)
-                if datagram.get_sequence_number()-1 > endpoint.ack():
+                if datagram.get_sequence_number()-1 < endpoint.ack:
                     continue
                 if datagram.get_sequence_number()-1 == endpoint.ack:
                     endpoint.increment_seq()

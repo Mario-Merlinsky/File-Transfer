@@ -50,8 +50,11 @@ class Client:
         try:
             self.endpoint.send_message(datagram)
             data = self.endpoint.receive_message(MSS + HEADER_SIZE)
-            response = Datagram.from_bytes(data).analyze()
-            if handshake_is_valid(response, flag):
+            response = Datagram.from_bytes(data)
+            if response.is_error():
+                print(response.analyze().msg)
+                return
+            if handshake_is_valid(response.analyze(), flag):
                 return response
             self.handshake(syn_payload, flag)
         except timeout:
@@ -134,8 +137,8 @@ class Client:
 
 
 def handshake_is_valid(response: Datagram, flag: Flags):
-    if not (isinstance(response, DownloadACK) and flag == Flags.SYN_DOWNLOAD):
-        return False
-    if not (isinstance(response, UploadACK) and flag == Flags.SYN_UPLOAD):
-        return False
-    return True
+    if (isinstance(response, DownloadACK) and flag == Flags.SYN_DOWNLOAD):
+        return True
+    if (isinstance(response, UploadACK) and flag == Flags.SYN_UPLOAD):
+        return True
+    return False
