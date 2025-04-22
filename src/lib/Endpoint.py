@@ -24,7 +24,7 @@ class Endpoint:
         self.remote_addr = remote_addr
         self.last_msg = None
 
-    last_msg: Optional[Datagram]
+    last_msg: Optional[bytes]
 
     def increment_seq(self, value: int = 1):
         self.seq += value

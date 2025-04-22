@@ -1,6 +1,7 @@
 from mininet.topo import Topo
 from mininet.link import TCLink
 
+
 class MyTopo(Topo):
     def __init__(self):
         Topo.__init__(self)
@@ -15,5 +16,6 @@ class MyTopo(Topo):
         self.addLink(s1, s2)
         self.addLink(s2, s3)
         self.addLink(h2, s3)
+
 
 topos = {'mytopo': (lambda: MyTopo())}
