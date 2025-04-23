@@ -5,7 +5,6 @@ from .Messages.UploadACK import UploadACK
 from .Messages.UploadSYN import UploadSYN
 from .Messages.DownloadACK import DownloadACK
 from .Messages.DownloadSYN import DownloadSYN
-from .Messages.Data import Data
 from .Messages.Error import Error
 
 HEADER_SIZE = struct.calcsize("!HHIIB")
@@ -42,10 +41,6 @@ class Header:
                 return DownloadSYN.from_bytes(data)
             case Flags.ACK_DOWNLOAD:
                 return DownloadACK.from_bytes(data)
-            case Flags.UPLOAD:
-                return Data.from_bytes(data)
-            case Flags.DOWNLOAD:
-                return Data.from_bytes(data)
             case Flags.ERROR:
                 return Error.from_bytes(data)
 

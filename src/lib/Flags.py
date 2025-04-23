@@ -6,8 +6,7 @@ class Flags(IntEnum):
     DOWNLOAD = 2
     SYN = 4
     ACK = 8
-    FIN = 16
-    ERROR = 32
+    ERROR = 16
     SYN_UPLOAD = SYN | UPLOAD
     ACK_UPLOAD = ACK | UPLOAD
     SYN_DOWNLOAD = SYN | DOWNLOAD

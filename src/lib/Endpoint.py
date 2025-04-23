@@ -1,8 +1,7 @@
 from typing import Optional
 from socket import socket
-from lib.Header import HEADER_SIZE
 from lib.Datagram import Datagram
-
+from lib.Header import HEADER_SIZE
 from .RecoveryProtocol import RecoveryProtocol
 
 INITIAL_ACK_NUMBER = 0
@@ -19,19 +18,13 @@ class Endpoint:
     ):
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
-        if recovery_protocol.PROTOCOL_ID == 1:
-            self.window_size = (
-                (mss + HEADER_SIZE)
-                * recovery_protocol.PROTOCOL_ID
-            )
-        else:
-            self.window_size = recovery_protocol.PROTOCOL_ID
-        # self.window_size =
-        # (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+        self.window_size = recovery_protocol.PROTOCOL_ID
+        self.buffer_size = mss + HEADER_SIZE
         self.socket = socket
         self.remote_addr = remote_addr
+        self.last_msg = None
 
-    last_ack: Optional[Datagram] = None
+    last_msg: Optional[bytes]
 
     def increment_seq(self, value: int = 1):
         self.seq += value
@@ -42,14 +35,14 @@ class Endpoint:
     def update_window_size(self, new_size: int):
         self.window_size = new_size
 
-    def update_last_ack(self, ack_datagram: Datagram):
-        self.last_ack = ack_datagram
+    def update_last_msg(self, ack_datagram: Datagram):
+        self.last_msg = ack_datagram
 
     def send_message(self, data: bytes):
         self.socket.sendto(data, self.remote_addr)
 
-    def receive_message(self, buffer_size: int):
-        data, _ = self.socket.recvfrom(buffer_size)
+    def receive_message(self):
+        data, _ = self.socket.recvfrom(self.buffer_size)
         return data
 
     def set_timeout(self, time: float):

@@ -1,5 +1,8 @@
 from queue import Queue
+from queue import Empty
+from time import time
 from socket import socket
+from socket import timeout
 from threading import Thread
 from .Datagram import Datagram
 from .Flags import Flags
@@ -8,7 +11,7 @@ from .Messages.UploadSYN import UploadSYN
 from .Messages.UploadACK import UploadACK
 from .Messages.DownloadSYN import DownloadSYN
 from .Messages.DownloadACK import DownloadACK
-from .Header import Header
+from .Header import Header, HEADER_SIZE
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from pathlib import Path
@@ -16,9 +19,8 @@ from pathlib import Path
 
 # 25MB
 MAX_FILE_SIZE = 26214400
-MSS = 1024
+MSS = 1100
 INITIAL_RTT = 1
-BUFFER_SIZE = 1300
 
 
 class Server:
@@ -35,13 +37,6 @@ class Server:
         self.socket = socket
         self.queues = {}  # {Cliente: Queue}
         self.endpoints = {}  # {Cliente: Endpoint}
-
-        storage_dir = Path(storage_path)
-        if not storage_dir.exists():
-            storage_dir.mkdir(parents=True, exist_ok=True)
-            print(f"Directorio {storage_path} creado con exito")
-        else:
-            print(f"Directorio {storage_path} ya existe")
 
         self.queues: dict[tuple[str, int], Queue] = {}
         self.endpoints: dict[tuple[str, int], Endpoint] = {}
@@ -66,17 +61,18 @@ class Server:
     def start(self):
         print("Servidor creado con exito, esperando mensajes de cliente")
 
-        while True:
-            data, client_addr = self.socket.recvfrom(BUFFER_SIZE)
-            if client_addr not in self.queues:
-                print("Nueva conexion recibida")
-                self.setup_new_client(client_addr)
-            self.queues[client_addr].put(data)
+        try:
+            while True:
+                data, client_addr = self.socket.recvfrom(MSS + HEADER_SIZE)
+                if client_addr not in self.queues:
+                    print("Nueva conexion recibida")
+                    self.setup_new_client(client_addr)
+                self.queues[client_addr].put(data)
+        except KeyboardInterrupt:
+            print("Servidor detenido")
 
     def handle_client(self, client_addr: tuple[str, int]):
         queue = self.queues[client_addr]
-        filename = None
-        file_size = None
         while True:
             try:
                 data = queue.get()
@@ -85,16 +81,15 @@ class Server:
 
                 match payload:
                     case UploadSYN():
-                        filename, file_size = self.handle_upload_syn(
+                        self.handle_upload_syn(
                             datagram, payload, client_addr)
-                        self.handle_upload(filename, file_size, client_addr)
                     case DownloadSYN():
                         self.handle_download_syn(
                             datagram, payload, client_addr)
-
             except Exception as e:
                 print(f"Error al manejar el cliente {client_addr}: {e}")
                 break
+            self.cleanup(client_addr)
 
     def handle_upload_syn(
         self,
@@ -106,7 +101,8 @@ class Server:
         error = self.validate_upload_syn(client_payload)
         endp = self.endpoints[client_address]
         if error is not None:
-            self.send_error_response(error, ack, endp)
+            send_error_response(error, ack, endp)
+            self.cleanup(client_address)
             return
 
         payload = UploadACK(MSS).to_bytes()
@@ -121,11 +117,17 @@ class Server:
         ack = Datagram(
             header,
             payload
-        )
-        endp.last_ack = ack
+        ).to_bytes()
+        endp.update_last_msg(ack)
 
-        endp.send_message(ack.to_bytes())
-        return client_payload.filename, client_payload.file_size
+        endp.send_message(ack)
+
+        self.handle_upload(
+            client_payload.filename,
+            client_payload.file_size,
+            client_address
+        )
+        return
 
     def handle_upload(
         self,
@@ -146,10 +148,6 @@ class Server:
         except Exception as e:
             print(f"Error durante la recepción del archivo: {e}")
             Path(file_path).unlink(missing_ok=True)
-        # TODO
-        # cambiar al fin
-        self.queues.pop(client_address)
-        self.endpoints.pop(client_address)
 
     def validate_upload_syn(self, client_payload: UploadSYN):
         error = self.validate_syn(client_payload)
@@ -191,29 +189,35 @@ class Server:
         ack = client_datagram.get_sequence_number()
         error, filepath = self.validate_download_syn(client_payload)
 
-        if error is None:
-            file_data = self.send_download_ack(
-                client_datagram.get_sequence_number(),
-                filepath,
-                endp
-            )
-            queue = self.queues[client_addr]
-            self.rp.send(
-                endp, file_data, queue, client_payload.mss, Flags.DOWNLOAD
-            )
+        if error is not None:
+            send_error_response(error, ack, endp)
+            self.cleanup(client_addr)
             return
-
-        datagram = Datagram.make_error_datagram(
-            endp.seq, ack, error
-        ).to_bytes()
-        endp.send_message(datagram)
+        print("llego un syn valido")
+        file_data, rtt = self.send_download_ack(
+            client_datagram.get_sequence_number(),
+            filepath,
+            endp,
+            client_addr
+        )
+        queue = self.queues[client_addr]
+        self.rp.send(
+            endp,
+            file_data,
+            queue,
+            client_payload.mss,
+            Flags.DOWNLOAD,
+            rtt
+        )
+        print("Mande el archivo")
         return
 
     def send_download_ack(
         self,
         ack_number: int,
         filepath: str,
-        endpoint: Endpoint
+        endpoint: Endpoint,
+        client_addr: tuple[str, int]
     ):
 
         file_data = read_file(filepath)
@@ -230,13 +234,44 @@ class Server:
             header,
             payload
         ).to_bytes()
+        endpoint.update_last_msg(datagram)
 
+        print("mande el download ack")
+        queue = self.queues[client_addr]
+        rtt = 0
+        start = time()
         endpoint.send_message(datagram)
+        while True:
+            try:
+                data = queue.get(timeout=INITIAL_RTT)
+                end = time()
+                response = Datagram.from_bytes(data)
+                if response.is_download_ack():
+                    rtt = end - start
+                    break
+            except Empty:
+                print("Timeout esperando download ack, reenviando")
+                start = time()
+                endpoint.send_message(datagram)
+                continue
+        print(f"rtt inicial = {rtt}")
+        return file_data, rtt
 
-        return file_data
+    def cleanup(self, client_addr: tuple[str, int]):
+        self.queues.pop(client_addr)
+        self.endpoints.pop(client_addr)
+        print(f"Cliente {client_addr} desconectado")
 
-    def send_error_response(self, payload: bytes, ack: int, endp: Endpoint):
-        flag = Flags.ERROR
-        header = Header(len(payload), endp.window_size, endp.seq, ack, flag)
-        datagram = Datagram(header, payload).to_bytes()
-        endp.send_message(datagram)
+
+def send_error_response(payload: bytes, ack: int, endp: Endpoint):
+    flag = Flags.ERROR
+    header = Header(len(payload), endp.window_size, endp.seq, ack, flag)
+    datagram = Datagram(header, payload).to_bytes()
+    endp.send_message(datagram)
+    try:
+        data = endp.receive_message()
+        response = Datagram.from_bytes(data)
+        if response.is_ack():
+            return
+    except timeout:
+        return send_error_response(payload, ack, endp)

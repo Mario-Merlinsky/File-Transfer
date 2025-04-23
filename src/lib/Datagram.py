@@ -32,6 +32,15 @@ class Datagram:
     def is_ack(self) -> bool:
         return self.header.flags == Flags.ACK
 
+    def is_error(self) -> bool:
+        return self.header.flags == Flags.ERROR
+
+    def is_download_ack(self) -> bool:
+        return self.header.flags == Flags.ACK_DOWNLOAD
+
+    def is_upload_ack(self) -> bool:
+        return self.header.flags == Flags.ACK_UPLOAD
+
     @staticmethod
     def from_bytes(datagram) -> 'Datagram':
         header = Header.from_bytes(datagram)

@@ -5,7 +5,7 @@ from time import time
 from threading import Thread
 from queue import Queue
 from .Flags import Flags
-from .Header import Header, HEADER_SIZE
+from .Header import Header
 from .Datagram import Datagram
 from .Messages.UploadACK import UploadACK
 from .Messages.UploadSYN import UploadSYN
@@ -18,8 +18,6 @@ from .Util import read_file
 
 MSS = 1024
 INITIAL_RTT = 1
-INITIAL_SEQ_NUMBER = 0
-INITIAL_ACK_NUMBER = 0
 TIMEOUT_COEFFICIENT = 1.5
 
 
@@ -37,24 +35,79 @@ class Client:
         self.filename = filename
         self.rp = recovery_protocol
 
-    def handshake(self, syn_payload, flags: Flags):
+    def handshake_upload(self, syn_payload):
         header = Header(
             len(syn_payload),
-            (MSS + HEADER_SIZE) * self.rp.PROTOCOL_ID,
-            INITIAL_SEQ_NUMBER,
-            INITIAL_ACK_NUMBER,
-            flags,
+            self.endpoint.window_size,
+            self.endpoint.seq,
+            self.endpoint.ack,
+            Flags.SYN_UPLOAD,
         )
 
         datagram = Datagram(header, syn_payload).to_bytes()
         try:
             self.endpoint.send_message(datagram)
-            data = self.endpoint.receive_message(MSS + HEADER_SIZE)
+            print("Mande syn")
+            data = self.endpoint.receive_message()
+            print("Recibi mensaje")
+            response = Datagram.from_bytes(data)
+            print(f"flags: {response.header.flags}")
+            if response.is_error():
+                print(response.analyze().msg)
+                return None
+            if response.is_upload_ack():
+                self.endpoint.set_timeout(None)
+                return response
+            print("No es un syn ack, handshake devuelta")
+            return self.handshake_upload(syn_payload)
+        except timeout:
+            print("Timeout, handshake devuelta")
+            return self.handshake_upload(syn_payload)
 
-        except TimeoutError:
-            self.handshake(syn_payload, flags)
+    def handshake_download(self, syn_payload):
+        header = Header(
+            len(syn_payload),
+            self.endpoint.window_size,
+            self.endpoint.seq,
+            self.endpoint.ack,
+            Flags.SYN_DOWNLOAD,
+        )
 
-        return Datagram.from_bytes(data)
+        datagram = Datagram(header, syn_payload).to_bytes()
+        try:
+            self.endpoint.send_message(datagram)
+            print("Mande syn")
+            data = self.endpoint.receive_message()
+            print("Recibi mensaje")
+            response = Datagram.from_bytes(data)
+            print(f"flags: {response.header.flags}")
+            if response.is_error():
+                print(response.analyze().msg)
+                return None
+            if not response.is_download_ack():
+                print("No es un syn ack, handshake devuelta")
+                return self.handshake_download(syn_payload)
+            self.endpoint.set_timeout(None)
+            self.endpoint.increment_seq()
+            self.endpoint.ack = response.get_sequence_number()
+            self.handshake_download_2(datagram)
+            return response
+        except timeout:
+            print("Timeout, handshake devuelta")
+            return self.handshake_download(syn_payload)
+
+    def handshake_download_2(self, datagram: Datagram):
+        header = Header(
+            0,
+            self.endpoint.window_size,
+            self.endpoint.seq,
+            self.endpoint.ack,
+            Flags.ACK_DOWNLOAD,
+        )
+
+        datagram = Datagram(header, b"").to_bytes()
+        self.endpoint.send_message(datagram)
+        self.endpoint.update_last_msg(datagram)
 
     def start_upload(self):
         file_data = read_file(self.filepath)
@@ -67,11 +120,11 @@ class Client:
             self.rp.PROTOCOL_ID
         ).to_bytes()
 
-        flag = Flags.SYN_UPLOAD
         start = time()
-        syn_ack = self.handshake(syn_payload, flag)
+        syn_ack = self.handshake_upload(syn_payload)
+        if syn_ack is None:
+            return
         rtt = time() - start
-        self.endpoint.set_timeout(rtt * TIMEOUT_COEFFICIENT)
 
         ack_payload = syn_ack.analyze()
 
@@ -86,7 +139,12 @@ class Client:
         )
         thread.start()
         self.rp.send(
-            self.endpoint, file_data, queue, ack_payload.mss, Flags.UPLOAD
+            self.endpoint,
+            file_data,
+            queue,
+            ack_payload.mss,
+            Flags.UPLOAD,
+            rtt * TIMEOUT_COEFFICIENT
         )
 
     def start_download(self):
@@ -96,11 +154,10 @@ class Client:
             MSS,
             self.rp.PROTOCOL_ID
         ).to_bytes()
-        flag = Flags.SYN_DOWNLOAD
-        start = time()
-        syn_ack = self.handshake(payload, flag)
-        rtt = time() - start
-        self.endpoint.set_timeout(rtt * TIMEOUT_COEFFICIENT)
+        syn_ack = self.handshake_download(payload)
+        print("Handhsake finalizado")
+        if syn_ack is None:
+            return
         ack_payload = syn_ack.analyze()
 
         if not isinstance(ack_payload, DownloadACK):
@@ -123,25 +180,5 @@ class Client:
 
     def enqueue_incoming_packets(self, queue):
         while True:
-            try:
-                data = self.endpoint.receive_message(MSS + HEADER_SIZE)
-            except timeout:
-                header = Header(0, 0, 0, 0, Flags.ERROR)
-                payload = b'0'
-                data = Datagram(header, payload).to_bytes()
+            data = self.endpoint.receive_message()
             queue.put(data)
-
-
-def archivos_iguales(path1, path2):
-    with open(path1, 'rb') as f1, open(path2, 'rb') as f2:
-        while True:
-            b1 = f1.read(4096)
-            b2 = f2.read(4096)
-            if b1 != b2:
-                print("los archivos no son iguales")
-                print(b1, b2)
-                return
-            if not b1:  # Ambos llegaron al final
-                break
-        print("los archivos son iguales")
-        return

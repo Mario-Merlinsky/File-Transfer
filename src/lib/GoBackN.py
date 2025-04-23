@@ -1,5 +1,5 @@
 from io import BufferedWriter
-import socket
+from time import time
 from queue import Queue, Empty
 from .Header import Header
 from .Flags import Flags
@@ -13,16 +13,14 @@ from math import ceil
 class GoBackN(RecoveryProtocol):
     PROTOCOL_ID = ProtocolID.GO_BACK_N
 
-    def copy(self) -> 'GoBackN':
-        return GoBackN(self.socket, self.addr)
-
     def send(
         self,
         endpoint: Endpoint,
         file_data: bytes,
         queue: Queue,
         receiver_mss: int,
-        flag: Flags
+        flag: Flags,
+        rtt: float
     ):
         base = endpoint.seq
         next_seq = base
@@ -46,11 +44,11 @@ class GoBackN(RecoveryProtocol):
                     window_size=endpoint.window_size,
                     sequence_number=next_seq,
                     acknowledgment_number=endpoint.ack,
-                    flags=Flags.UPLOAD
+                    flags=flag
                 )
                 datagram = Datagram(header, segment).to_bytes()
                 buffer[next_seq] = datagram
-
+                start = time()
                 endpoint.send_message(datagram)
                 print(
                     f"[SEND] Paquete enviado: Seq={next_seq}, "
@@ -58,8 +56,8 @@ class GoBackN(RecoveryProtocol):
                 next_seq += 1
 
             try:
-                response_data = queue.get()
-
+                response_data = queue.get(timeout=rtt)
+                rtt = (rtt + (time() - start)) / 2
                 response_datagram = Datagram.from_bytes(response_data)
 
                 if response_datagram.is_ack():
@@ -72,9 +70,10 @@ class GoBackN(RecoveryProtocol):
                             if seq <= ack_number:
                                 del buffer[seq]
 
-            except socket.timeout:
-                print(f"Timeout actual: {self.socket.gettimeout()} segundos")
+            except Empty:
+                print(f"Timeout actual: {rtt} segundos")
                 print("Timeout esperando ACK, reenviando ventana")
+                rtt = rtt * 2
                 for seq in range(base, next_seq):
                     if seq in buffer:
                         endpoint.send_message(buffer[seq])
@@ -93,7 +92,7 @@ class GoBackN(RecoveryProtocol):
             try:
                 data = queue.get()
                 datagram = Datagram.from_bytes(data)
-
+                print(f"window size = {endpoint.window_size}")
                 print(f"[RECEIVE] ACK esperado: {endpoint.ack}")
 
                 if datagram.get_sequence_number() == endpoint.ack:
@@ -134,11 +133,3 @@ class GoBackN(RecoveryProtocol):
         file.close()
         print(
             f"[SERVER] Archivo recibido correctamente: {bytes_written} bytes")
-
-    def send_error_response(self, message: str, ack_number: int):
-        error_datagram = Datagram.make_error_datagram(
-            self.seq,
-            ack_number,
-            message.encode()
-        )
-        self.socket.sendto(error_datagram.to_bytes(), self.addr)
