@@ -1,0 +1,254 @@
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+python3 start-server.py -H 10.0.0.1 -p 7000 -s /home/mariano-merlinsky/Escritor
+io/servidor -r GBN
+[?2004lServidor creado con exito, esperando mensajes de cliente
+Nueva conexion recibida
+[RECEIVE] Numero de seq esperado: 1
+[RECEIVE] Paquete recibido antes del if: Seq=1
+[RECEIVE] Numero de seq esperado: 2
+[RECEIVE] Paquete recibido antes del if: Seq=2
+[SEND] ACK enviado acumulativo: 2
+[RECEIVE] Numero de seq esperado: 3
+[RECEIVE] Paquete fuera de orden: Seq=1
+[RECEIVE] Numero de seq esperado: 3
+[RECEIVE] Paquete recibido antes del if: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+^CServidor detenido
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+python3 start-server.py -H 10.0.0.1 -p 7000 -s /home/mariano-merlinsky/Escritor
+io/servidor -r GBN
+[?2004lServidor creado con exito, esperando mensajes de cliente
+Nueva conexion recibida
+[RECEIVE] Numero de seq esperado: 1
+[RECEIVE] Paquete recibido antes del if: Seq=1
+[RECEIVE] Numero de seq esperado: 2
+[RECEIVE] Paquete fuera de orden: Seq=4
+[RECEIVE] Numero de seq esperado: 2
+[RECEIVE] Paquete recibido antes del if: Seq=2
+[RECEIVE] Numero de seq esperado: 3
+[RECEIVE] Paquete recibido antes del if: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=1
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=2
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete recibido antes del if: Seq=4
+[SEND] ACK enviado acumulativo: 4
+[RECEIVE] Numero de seq esperado: 5
+[RECEIVE] Paquete recibido antes del if: Seq=5
+[RECEIVE] Numero de seq esperado: 6
+[RECEIVE] Paquete recibido antes del if: Seq=6
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete recibido antes del if: Seq=7
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=5
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=7
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=5
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=7
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=5
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=7
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=5
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=7
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=5
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=7
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=5
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete fuera de orden: Seq=7
+^CServidor detenido
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+python3 start-server.py -H 10.0.0.1 -p 7000 -s /home/mariano-merlinsky/Escritor
+io/servidor -r GBN
+[?2004lServidor creado con exito, esperando mensajes de cliente
+Nueva conexion recibida
+[RECEIVE] Numero de seq esperado: 1
+[RECEIVE] Paquete fuera de orden: Seq=0
+[RECEIVE] Numero de seq esperado: 1
+[RECEIVE] Paquete recibido antes del if: Seq=1
+[RECEIVE] Numero de seq esperado: 2
+[RECEIVE] Paquete recibido antes del if: Seq=2
+[SEND] ACK enviado acumulativo: 2
+[RECEIVE] Numero de seq esperado: 3
+[RECEIVE] Paquete recibido antes del if: Seq=3
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete fuera de orden: Seq=3
+^CServidor detenido
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+python3 start-server.py -H 10.0.0.1 -p 7000 -s /home/mariano-merlinsky/Escritor
+io/servidor -r GBN
+[?2004lServidor creado con exito, esperando mensajes de cliente
+Nueva conexion recibida
+[RECEIVE] Numero de seq esperado: 0
+[RECEIVE] Paquete fuera de orden: Seq=1
+[RECEIVE] Numero de seq esperado: 0
+[RECEIVE] Paquete recibido antes del if: Seq=0
+[RECEIVE] Numero de seq esperado: 1
+[RECEIVE] Paquete recibido antes del if: Seq=1
+[SEND] ACK enviado acumulativo: 2
+[RECEIVE] Numero de seq esperado: 2
+[RECEIVE] Paquete recibido antes del if: Seq=2
+[RECEIVE] Numero de seq esperado: 3
+[RECEIVE] Paquete recibido antes del if: Seq=3
+[SEND] ACK enviado acumulativo: 4
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete recibido antes del if: Seq=4
+[RECEIVE] Numero de seq esperado: 5
+[RECEIVE] Paquete recibido antes del if: Seq=5
+[SEND] ACK enviado acumulativo: 6
+[RECEIVE] Numero de seq esperado: 6
+[RECEIVE] Paquete recibido antes del if: Seq=6
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=6
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete recibido antes del if: Seq=7
+[SEND] ACK enviado acumulativo: 8
+[RECEIVE] Numero de seq esperado: 8
+[RECEIVE] Paquete recibido antes del if: Seq=8
+[RECEIVE] Numero de seq esperado: 9
+[RECEIVE] Paquete recibido antes del if: Seq=9
+[SEND] ACK enviado acumulativo: 10
+[RECEIVE] Numero de seq esperado: 10
+[RECEIVE] Paquete recibido antes del if: Seq=10
+[RECEIVE] Numero de seq esperado: 11
+[RECEIVE] Paquete recibido antes del if: Seq=11
+[SEND] ACK enviado acumulativo: 12
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+[RECEIVE] Numero de seq esperado: 12
+[RECEIVE] Paquete fuera de orden: Seq=13
+^CServidor detenido
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+python3 start-server.py -H 10.0.0.1 -p 7000 -s /home/mariano-merlinsky/Escritor
+io/servidor -r GBN
+[?2004lServidor creado con exito, esperando mensajes de cliente
+Nueva conexion recibida
+[RECEIVE] Numero de seq esperado: 0
+[RECEIVE] Paquete recibido antes del if: Seq=0
+[SEND] ACK enviado acumulativo: 1
+[RECEIVE] Numero de seq esperado: 1
+[RECEIVE] Paquete recibido antes del if: Seq=1
+[SEND] ACK enviado acumulativo: 2
+[RECEIVE] Numero de seq esperado: 2
+[RECEIVE] Paquete recibido antes del if: Seq=2
+[SEND] ACK enviado acumulativo: 3
+[RECEIVE] Numero de seq esperado: 3
+[RECEIVE] Paquete recibido antes del if: Seq=3
+[SEND] ACK enviado acumulativo: 4
+[RECEIVE] Numero de seq esperado: 4
+[RECEIVE] Paquete recibido antes del if: Seq=4
+[SEND] ACK enviado acumulativo: 5
+[RECEIVE] Numero de seq esperado: 5
+[RECEIVE] Paquete recibido antes del if: Seq=5
+[SEND] ACK enviado acumulativo: 6
+[RECEIVE] Numero de seq esperado: 6
+[RECEIVE] Paquete recibido antes del if: Seq=6
+[SEND] ACK enviado acumulativo: 7
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+[RECEIVE] Numero de seq esperado: 7
+[RECEIVE] Paquete fuera de orden: Seq=8
+^CServidor detenido
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+^C[?2004l[?2004h[?2004l
+[?2004hroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+[H[Jroot@mariano-merlinsky-MAX-G0101:/home/mariano-merlinsky/Escritorio/Redes/src# 
+python3 start-server.py -H 10.0.0.1 -p 7000 -s /home/mariano-merlinsky/Escritor
+io/servidor -r GBN
+[?2004lServidor creado con exito, esperando mensajes de cliente
+^L^L^L^Ll^Lc^L^L^L^L^[[A

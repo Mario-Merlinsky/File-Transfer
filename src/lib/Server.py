@@ -19,7 +19,7 @@ from pathlib import Path
 
 # 25MB
 MAX_FILE_SIZE = 26214400
-MSS = 1100
+MSS = 1024
 INITIAL_RTT = 1
 
 

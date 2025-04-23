@@ -47,3 +47,6 @@ class Endpoint:
 
     def set_timeout(self, time: float):
         self.socket.settimeout(time)
+
+    def send_last_message(self):
+        self.send_message(self.last_msg)

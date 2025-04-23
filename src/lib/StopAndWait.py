@@ -72,7 +72,7 @@ class StopAndWait(RecoveryProtocol):
                             continue
                     else:
                         print(f"{endpoint.last_msg}")
-                        endpoint.send_message(endpoint.last_msg)
+                        endpoint.send_last_message()
                         print("retransmit")
                         continue
 
@@ -122,7 +122,7 @@ class StopAndWait(RecoveryProtocol):
                     endpoint.send_message(ack)
                 else:
                     print(f"duplicado rec: {datagram.get_sequence_number()}")
-                    endpoint.send_message(endpoint.last_msg)
+                    endpoint.send_last_message()
             except Exception as e:
                 print(f"Error en recepción: {e}")
                 raise
@@ -131,7 +131,7 @@ class StopAndWait(RecoveryProtocol):
         while True:
             try:
                 data = queue.get(timeout=CONNECTION_TIMEOUT)
-                endpoint.send_message(endpoint.last_msg)
+                endpoint.send_last_message()
                 continue
             except Empty:
                 return
