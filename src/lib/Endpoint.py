@@ -1,8 +1,7 @@
 from typing import Optional
 from socket import socket
-from lib.Header import HEADER_SIZE
 from lib.Datagram import Datagram
-
+from lib.Header import HEADER_SIZE
 from .RecoveryProtocol import RecoveryProtocol
 
 INITIAL_ACK_NUMBER = 0
@@ -19,7 +18,8 @@ class Endpoint:
     ):
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
-        self.window_size = (mss + HEADER_SIZE) * recovery_protocol.PROTOCOL_ID
+        self.window_size = recovery_protocol.PROTOCOL_ID
+        self.buffer_size = mss + HEADER_SIZE
         self.socket = socket
         self.remote_addr = remote_addr
         self.last_msg = None
@@ -41,9 +41,12 @@ class Endpoint:
     def send_message(self, data: bytes):
         self.socket.sendto(data, self.remote_addr)
 
-    def receive_message(self, buffer_size: int):
-        data, _ = self.socket.recvfrom(buffer_size)
+    def receive_message(self):
+        data, _ = self.socket.recvfrom(self.buffer_size)
         return data
 
     def set_timeout(self, time: float):
         self.socket.settimeout(time)
+
+    def send_last_message(self):
+        self.send_message(self.last_msg)

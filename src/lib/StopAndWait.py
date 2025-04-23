@@ -15,9 +15,6 @@ CONNECTION_TIMEOUT = 5
 class StopAndWait(RecoveryProtocol):
     PROTOCOL_ID = ProtocolID.STOP_AND_WAIT
 
-    def copy(self) -> 'StopAndWait':
-        return StopAndWait(self.socket, self.addr)
-
     def send(
         self,
         endpoint: Endpoint,
@@ -60,6 +57,7 @@ class StopAndWait(RecoveryProtocol):
                     print(f"mande paquete con seq = {header.sequence_number}")
                     response_data = queue.get(timeout=rtt)
                     rtt = (rtt + (time() - start)) / 2
+                    print(f"rtt: {rtt}")
                     response_datagram = Datagram.from_bytes(response_data)
 
                     print(f"flag: {response_datagram.header.flags}")
@@ -74,7 +72,7 @@ class StopAndWait(RecoveryProtocol):
                             continue
                     else:
                         print(f"{endpoint.last_msg}")
-                        endpoint.send_message(endpoint.last_msg)
+                        endpoint.send_last_message()
                         print("retransmit")
                         continue
 
@@ -99,7 +97,7 @@ class StopAndWait(RecoveryProtocol):
             try:
                 data = queue.get()
                 datagram = Datagram.from_bytes(data)
-                print(f"me llego paquete con seq = {datagram.get_sequence_number()}")
+                print(f"paquete con seq = {datagram.get_sequence_number()}")
                 print(f"esperaba el {endpoint.ack + 1}")
                 print(f"flags: {datagram.header.flags}")
                 received_payload = datagram.data
@@ -123,8 +121,8 @@ class StopAndWait(RecoveryProtocol):
                     endpoint.last_msg = ack
                     endpoint.send_message(ack)
                 else:
-                    print(f"Paquete duplicado recibido: {datagram.get_sequence_number()}")
-                    endpoint.send_message(endpoint.last_msg)
+                    print(f"duplicado rec: {datagram.get_sequence_number()}")
+                    endpoint.send_last_message()
             except Exception as e:
                 print(f"Error en recepción: {e}")
                 raise
@@ -133,15 +131,7 @@ class StopAndWait(RecoveryProtocol):
         while True:
             try:
                 data = queue.get(timeout=CONNECTION_TIMEOUT)
-                endpoint.send_message(endpoint.last_msg)
+                endpoint.send_last_message()
                 continue
             except Empty:
                 return
-
-    def send_error_response(self, message: str, ack_number: int):
-        error_datagram = Datagram.make_error_datagram(
-                self.seq,
-                ack_number,
-                message.encode()
-            )
-        self.socket.sendto(error_datagram.to_bytes(), self.addr)

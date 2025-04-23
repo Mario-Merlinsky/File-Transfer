@@ -1,5 +1,6 @@
 from queue import Queue
 from queue import Empty
+from time import time
 from socket import socket
 from socket import timeout
 from threading import Thread
@@ -19,8 +20,7 @@ from pathlib import Path
 # 25MB
 MAX_FILE_SIZE = 26214400
 MSS = 1024
-INITIAL_RTT = 0.03
-BUFFER_SIZE = MSS + HEADER_SIZE
+INITIAL_RTT = 1
 
 
 class Server:
@@ -37,6 +37,7 @@ class Server:
         self.socket = socket
         self.queues = {}  # {Cliente: Queue}
         self.endpoints = {}  # {Cliente: Endpoint}
+
         self.queues: dict[tuple[str, int], Queue] = {}
         self.endpoints: dict[tuple[str, int], Endpoint] = {}
     # Este metodo recibe los mensajes de clientes
@@ -62,7 +63,7 @@ class Server:
 
         try:
             while True:
-                data, client_addr = self.socket.recvfrom(BUFFER_SIZE)
+                data, client_addr = self.socket.recvfrom(MSS + HEADER_SIZE)
                 if client_addr not in self.queues:
                     print("Nueva conexion recibida")
                     self.setup_new_client(client_addr)
@@ -193,7 +194,7 @@ class Server:
             self.cleanup(client_addr)
             return
         print("llego un syn valido")
-        file_data = self.send_download_ack(
+        file_data, rtt = self.send_download_ack(
             client_datagram.get_sequence_number(),
             filepath,
             endp,
@@ -206,7 +207,7 @@ class Server:
             queue,
             client_payload.mss,
             Flags.DOWNLOAD,
-            INITIAL_RTT
+            rtt
         )
         print("Mande el archivo")
         return
@@ -235,20 +236,26 @@ class Server:
         ).to_bytes()
         endpoint.update_last_msg(datagram)
 
-        endpoint.send_message(datagram)
         print("mande el download ack")
         queue = self.queues[client_addr]
+        rtt = 0
+        start = time()
+        endpoint.send_message(datagram)
         while True:
             try:
                 data = queue.get(timeout=INITIAL_RTT)
+                end = time()
                 response = Datagram.from_bytes(data)
                 if response.is_download_ack():
+                    rtt = end - start
                     break
             except Empty:
                 print("Timeout esperando download ack, reenviando")
+                start = time()
                 endpoint.send_message(datagram)
                 continue
-        return file_data
+        print(f"rtt inicial = {rtt}")
+        return file_data, rtt
 
     def cleanup(self, client_addr: tuple[str, int]):
         self.queues.pop(client_addr)
@@ -262,7 +269,7 @@ def send_error_response(payload: bytes, ack: int, endp: Endpoint):
     datagram = Datagram(header, payload).to_bytes()
     endp.send_message(datagram)
     try:
-        data = endp.receive_message(BUFFER_SIZE)
+        data = endp.receive_message()
         response = Datagram.from_bytes(data)
         if response.is_ack():
             return

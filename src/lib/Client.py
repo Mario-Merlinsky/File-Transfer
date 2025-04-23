@@ -36,10 +36,9 @@ class Client:
         self.rp = recovery_protocol
 
     def handshake_upload(self, syn_payload):
-        window_size = self.endpoint.window_size
         header = Header(
             len(syn_payload),
-            window_size,
+            self.endpoint.window_size,
             self.endpoint.seq,
             self.endpoint.ack,
             Flags.SYN_UPLOAD,
@@ -49,7 +48,7 @@ class Client:
         try:
             self.endpoint.send_message(datagram)
             print("Mande syn")
-            data = self.endpoint.receive_message(window_size)
+            data = self.endpoint.receive_message()
             print("Recibi mensaje")
             response = Datagram.from_bytes(data)
             print(f"flags: {response.header.flags}")
@@ -66,10 +65,9 @@ class Client:
             return self.handshake_upload(syn_payload)
 
     def handshake_download(self, syn_payload):
-        window_size = self.endpoint.window_size
         header = Header(
             len(syn_payload),
-            window_size,
+            self.endpoint.window_size,
             self.endpoint.seq,
             self.endpoint.ack,
             Flags.SYN_DOWNLOAD,
@@ -79,7 +77,7 @@ class Client:
         try:
             self.endpoint.send_message(datagram)
             print("Mande syn")
-            data = self.endpoint.receive_message(window_size)
+            data = self.endpoint.receive_message()
             print("Recibi mensaje")
             response = Datagram.from_bytes(data)
             print(f"flags: {response.header.flags}")
@@ -99,10 +97,9 @@ class Client:
             return self.handshake_download(syn_payload)
 
     def handshake_download_2(self, datagram: Datagram):
-        window_size = self.endpoint.window_size
         header = Header(
             0,
-            window_size,
+            self.endpoint.window_size,
             self.endpoint.seq,
             self.endpoint.ack,
             Flags.ACK_DOWNLOAD,
@@ -183,5 +180,5 @@ class Client:
 
     def enqueue_incoming_packets(self, queue):
         while True:
-            data = self.endpoint.receive_message(self.endpoint.window_size)
+            data = self.endpoint.receive_message()
             queue.put(data)

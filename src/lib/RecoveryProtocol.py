@@ -22,8 +22,4 @@ class RecoveryProtocol(ABC):
     ):
         pass
 
-    @abstractmethod
-    def copy(self) -> 'RecoveryProtocol':
-        pass
-
     PROTOCOL_ID: ProtocolID = 0

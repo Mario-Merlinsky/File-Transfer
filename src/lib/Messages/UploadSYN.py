@@ -25,14 +25,14 @@ class UploadSYN(Message):
 
     @staticmethod
     def from_bytes(bytes: bytes) -> 'UploadSYN':
-        filename_lenght = int.from_bytes(bytes[0:2])
+        filename_lenght = int.from_bytes(bytes[0:2], byteorder='big')
         bytes = bytes[2:]
         filename = bytes[:filename_lenght].decode('utf-8')
         bytes = bytes[filename_lenght:]
-        file_size = int.from_bytes(bytes[:4])
+        file_size = int.from_bytes(bytes[:4], byteorder='big')
         bytes = bytes[4:]
-        mss = int.from_bytes(bytes[:2])
+        mss = int.from_bytes(bytes[:2], byteorder='big')
         bytes = bytes[2:]
-        recovery_protocol = int.from_bytes(bytes[:2])
+        recovery_protocol = int.from_bytes(bytes[:2], byteorder='big')
 
         return UploadSYN(filename, file_size, mss, recovery_protocol)
