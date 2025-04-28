@@ -22,7 +22,7 @@ class Header:
 
     def to_bytes(self) -> bytes:
         return struct.pack(
-            "!HHIIB",
+            "!HIIB",
             self.payload_size,
             self.sequence_number,
             self.acknowledgment_number,

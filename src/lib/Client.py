@@ -18,7 +18,7 @@ from .Util import read_file
 
 MSS = 1024
 INITIAL_RTT = 1
-TIMEOUT_COEFFICIENT = 1.5
+TIMEOUT_COEFFICIENT = 4
 WINDOW_SIZE = 4
 
 

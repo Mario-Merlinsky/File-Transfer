@@ -22,6 +22,7 @@ MAX_FILE_SIZE = 26214400
 MSS = 1024
 INITIAL_RTT = 1
 WINDOW_SIZE = 4
+TIMEOUT_COEFFICIENT = 4
 
 
 class Server:
@@ -74,23 +75,19 @@ class Server:
 
     def handle_client(self, client_addr: tuple[str, int]):
         queue = self.queues[client_addr]
-        while True:
-            try:
-                data = queue.get()
-                datagram = Datagram.from_bytes(data)
-                payload = datagram.analyze()
+        data = queue.get()
+        datagram = Datagram.from_bytes(data)
+        payload = datagram.analyze()
 
-                match payload:
-                    case UploadSYN():
-                        self.handle_upload_syn(
-                            datagram, payload, client_addr)
-                    case DownloadSYN():
-                        self.handle_download_syn(
-                            datagram, payload, client_addr)
-            except Exception as e:
-                print(f"Error al manejar el cliente {client_addr}: {e}")
-                break
-            self.cleanup(client_addr)
+        match payload:
+            case UploadSYN():
+                self.handle_upload_syn(
+                    datagram, payload, client_addr)
+            case DownloadSYN():
+                self.handle_download_syn(
+                    datagram, payload, client_addr)
+
+        self.cleanup(client_addr)
 
     def handle_upload_syn(
         self,
@@ -207,7 +204,7 @@ class Server:
             queue,
             client_payload.mss,
             Flags.DOWNLOAD,
-            rtt
+            rtt * TIMEOUT_COEFFICIENT
         )
         print("Mande el archivo")
         return
