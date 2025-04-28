@@ -1,12 +1,14 @@
 from io import BufferedWriter
 from time import time
 from queue import Queue, Empty
+from threading import Event
+from threading import Thread
 from .Header import Header
 from .Flags import Flags
 from .Datagram import Datagram
 from .RecoveryProtocol import RecoveryProtocol
-from .ProtocolID import ProtocolID
 from .Endpoint import Endpoint
+from .ProtocolID import ProtocolID
 from math import ceil
 
 CONNECTION_TIMEOUT = 5
@@ -24,6 +26,8 @@ class GoBackN(RecoveryProtocol):
         flag: Flags,
         rtt: float
     ):
+        timer_thread = None
+        timer_event = Event()
         base = endpoint.seq
         next_seq = base
         endpoint.increment_seq()
@@ -43,7 +47,6 @@ class GoBackN(RecoveryProtocol):
 
                 header = Header(
                     payload_size=len(segment),
-                    window_size=endpoint.window_size,
                     sequence_number=next_seq + 1,
                     acknowledgment_number=endpoint.ack,
                     flags=flag
@@ -55,19 +58,24 @@ class GoBackN(RecoveryProtocol):
                 print(
                     f"[SEND] Paquete enviado: Seq={next_seq + 1}, "
                     f"Tamaño={len(segment)} bytes")
+                if next_seq == 0:
+                    start_timer()
                 next_seq += 1
-
             try:
-                response_data = queue.get(timeout=rtt)
+                response_data = queue.get()
                 rtt = (rtt + (time() - start)) / 2
                 response_datagram = Datagram.from_bytes(response_data)
 
                 if response_datagram.is_ack():
+
                     ack_number = response_datagram.get_ack_number() - 1
                     print(f"ACK recibido: {ack_number + 1}")
-
                     if ack_number > base:
                         base = ack_number
+                        if base == next_seq:
+                            stop_timer(timer_event, timer_thread)
+                        else:
+                            start_timer(timer_event, timer_thread)
                         for seq in list(buffer.keys()):
                             if seq <= ack_number:
                                 del buffer[seq]
@@ -108,23 +116,17 @@ class GoBackN(RecoveryProtocol):
                     file.write(datagram.data)
                     bytes_written += len(datagram.data)
                     print(f"ack: {endpoint.ack}")
-                    print(f"window size {endpoint.window_size}")
-                    if (
-                        (endpoint.ack - 1) % endpoint.window_size == 0 or
-                        bytes_written >= file_size
-                    ):
-                        ack_header = Header(
-                            payload_size=0,
-                            window_size=endpoint.window_size,
-                            sequence_number=endpoint.seq,
-                            acknowledgment_number=endpoint.ack,
-                            flags=Flags.ACK
-                        )
-                        ack_datagram = Datagram(ack_header, b'').to_bytes()
-                        endpoint.send_message(ack_datagram)
-                        endpoint.update_last_msg(ack_datagram)
-                        print(
-                            f"[SEND] ACK enviado acumulativo: {endpoint.ack}")
+                    ack_header = Header(
+                        payload_size=0,
+                        sequence_number=endpoint.seq,
+                        acknowledgment_number=endpoint.ack,
+                        flags=Flags.ACK
+                    )
+                    ack_datagram = Datagram(ack_header, b'').to_bytes()
+                    endpoint.send_message(ack_datagram)
+                    endpoint.update_last_msg(ack_datagram)
+                    print(
+                        f"[SEND] ACK enviado acumulativo: {endpoint.ack}")
                 else:
                     print(
                         f"[RECEIVE] Paquete fuera de orden: "
@@ -149,3 +151,24 @@ class GoBackN(RecoveryProtocol):
                 continue
             except Empty:
                 return
+
+
+def start_timer(timer_event: Event, timer_thread: Thread, rtt: int):
+    stop_timer(timer_event, timer_thread)
+    timer_event.clear()
+    thread = Thread(target=timer, args=(timer_event, timer_thread, rtt))
+    thread.start()
+
+
+def stop_timer(timer_event, timer_thread: Thread):
+    timer_event.set()
+    if timer_thread is not None:
+        timer_thread.join()
+        timer_thread = None
+    pass
+
+
+def timer(timer_event: Event, timer_thread: Thread, rtt: int):
+    if not timer_event.wait(rtt):
+        pass
+    pass

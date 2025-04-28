@@ -19,6 +19,7 @@ from .Util import read_file
 MSS = 1024
 INITIAL_RTT = 1
 TIMEOUT_COEFFICIENT = 1.5
+WINDOW_SIZE = 4
 
 
 class Client:
@@ -30,7 +31,7 @@ class Client:
         remote_addr: tuple[str, int],
         socket: socket
     ):
-        self.endpoint = Endpoint(recovery_protocol, MSS, socket, remote_addr)
+        self.endpoint = Endpoint(WINDOW_SIZE, MSS, socket, remote_addr)
         self.filepath = filepath
         self.filename = filename
         self.rp = recovery_protocol
@@ -38,7 +39,6 @@ class Client:
     def handshake_upload(self, syn_payload):
         header = Header(
             len(syn_payload),
-            self.endpoint.window_size,
             self.endpoint.seq,
             self.endpoint.ack,
             Flags.SYN_UPLOAD,
@@ -67,7 +67,6 @@ class Client:
     def handshake_download(self, syn_payload):
         header = Header(
             len(syn_payload),
-            self.endpoint.window_size,
             self.endpoint.seq,
             self.endpoint.ack,
             Flags.SYN_DOWNLOAD,
@@ -99,7 +98,6 @@ class Client:
     def handshake_download_2(self, datagram: Datagram):
         header = Header(
             0,
-            self.endpoint.window_size,
             self.endpoint.seq,
             self.endpoint.ack,
             Flags.ACK_DOWNLOAD,

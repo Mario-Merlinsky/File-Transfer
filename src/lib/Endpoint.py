@@ -2,7 +2,6 @@ from typing import Optional
 from socket import socket
 from lib.Datagram import Datagram
 from lib.Header import HEADER_SIZE
-from .RecoveryProtocol import RecoveryProtocol
 
 INITIAL_ACK_NUMBER = 0
 INITIAL_SEQ_NUMBER = 0
@@ -11,14 +10,14 @@ INITIAL_SEQ_NUMBER = 0
 class Endpoint:
     def __init__(
         self,
-        recovery_protocol: RecoveryProtocol,
+        window_size: int,
         mss: int,
         socket: socket,
         remote_addr: str
     ):
         self.ack = INITIAL_ACK_NUMBER
         self.seq = INITIAL_SEQ_NUMBER
-        self.window_size = recovery_protocol.PROTOCOL_ID
+        self.window_size = window_size
         self.buffer_size = mss + HEADER_SIZE
         self.socket = socket
         self.remote_addr = remote_addr

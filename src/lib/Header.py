@@ -7,16 +7,15 @@ from .Messages.DownloadACK import DownloadACK
 from .Messages.DownloadSYN import DownloadSYN
 from .Messages.Error import Error
 
-HEADER_SIZE = struct.calcsize("!HHIIB")
+HEADER_SIZE = struct.calcsize("!HIIB")
 
 
 class Header:
     def __init__(
-        self, payload_size, window_size, sequence_number,
+        self, payload_size, sequence_number,
         acknowledgment_number, flags
     ):
         self.payload_size = payload_size
-        self.window_size = window_size
         self.sequence_number = sequence_number
         self.acknowledgment_number = acknowledgment_number
         self.flags = flags
@@ -25,7 +24,6 @@ class Header:
         return struct.pack(
             "!HHIIB",
             self.payload_size,
-            self.window_size,
             self.sequence_number,
             self.acknowledgment_number,
             self.flags
@@ -46,8 +44,8 @@ class Header:
 
     @staticmethod
     def from_bytes(bytes) -> 'Header':
-        header = struct.unpack("!HHIIB", bytes[:HEADER_SIZE])
-        payload_size, window_size, sequence_number, ack_number, flags = header
+        header = struct.unpack("!HIIB", bytes[:HEADER_SIZE])
+        payload_size, sequence_number, ack_number, flags = header
         return Header(
-            payload_size, window_size, sequence_number, ack_number, flags
+            payload_size, sequence_number, ack_number, flags
         )

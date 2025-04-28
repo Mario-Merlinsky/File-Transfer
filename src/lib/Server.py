@@ -21,6 +21,7 @@ from pathlib import Path
 MAX_FILE_SIZE = 26214400
 MSS = 1024
 INITIAL_RTT = 1
+WINDOW_SIZE = 4
 
 
 class Server:
@@ -54,7 +55,7 @@ class Server:
         )
         self.queues[client_addr] = Queue(-1)
         self.endpoints[client_addr] = Endpoint(
-            self.rp, MSS, self.socket, client_addr
+            WINDOW_SIZE, MSS, self.socket, client_addr
         )
         thread.start()
 
@@ -109,7 +110,6 @@ class Server:
 
         header = Header(
             payload_size=len(payload),
-            window_size=endp.window_size,
             sequence_number=endp.seq,
             acknowledgment_number=ack,
             flags=Flags.ACK_UPLOAD
@@ -228,7 +228,6 @@ class Server:
             acknowledgment_number=ack_number,
             flags=Flags.ACK_DOWNLOAD,
             payload_size=len(payload),
-            window_size=endpoint.window_size
         )
         datagram = Datagram(
             header,
@@ -265,7 +264,7 @@ class Server:
 
 def send_error_response(payload: bytes, ack: int, endp: Endpoint):
     flag = Flags.ERROR
-    header = Header(len(payload), endp.window_size, endp.seq, ack, flag)
+    header = Header(len(payload), endp.seq, ack, flag)
     datagram = Datagram(header, payload).to_bytes()
     endp.send_message(datagram)
     try:
