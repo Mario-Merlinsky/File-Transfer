@@ -1,6 +1,6 @@
 # Pasos para Ejecutar el Script
 
-## Imagen grafica de la topologia de la red
+## Esquema grafico de la topologia de la red
 ![Topología de la red](fragmentation.gif)
 
 ## Inicio de la topologia de la red
