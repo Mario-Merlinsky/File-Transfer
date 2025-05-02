@@ -1,7 +1,6 @@
 from io import BufferedWriter
 from queue import Queue
 from abc import ABC, abstractmethod
-from .ProtocolID import ProtocolID
 from .Flags import Flags
 
 
@@ -21,5 +20,3 @@ class RecoveryProtocol(ABC):
         flag: Flags
     ):
         pass
-
-    PROTOCOL_ID: ProtocolID = 0

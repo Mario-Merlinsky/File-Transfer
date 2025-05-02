@@ -6,8 +6,8 @@ from .Header import Header
 from .Flags import Flags
 from .Datagram import Datagram
 from .RecoveryProtocol import RecoveryProtocol
-from .ProtocolID import ProtocolID
 from .Endpoint import Endpoint
+from .ProtocolID import ProtocolID
 
 CONNECTION_TIMEOUT = 5
 
@@ -42,7 +42,6 @@ class StopAndWait(RecoveryProtocol):
 
             header = Header(
                 len(data),
-                endpoint.window_size,
                 endpoint.seq,
                 endpoint.ack,
                 flag
@@ -112,7 +111,6 @@ class StopAndWait(RecoveryProtocol):
 
                     ack_header = Header(
                         payload_size=0,
-                        window_size=endpoint.window_size,
                         sequence_number=datagram.get_sequence_number(),
                         acknowledgment_number=endpoint.ack,
                         flags=Flags.ACK

@@ -53,5 +53,5 @@ class Datagram:
     def make_error_datagram(
         seq_number: int, ack_number, payload: bytes
     ) -> 'Datagram':
-        header = Header(len(payload), 0, seq_number, ack_number, Flags.ERROR)
+        header = Header(len(payload), seq_number, ack_number, Flags.ERROR)
         return Datagram(header, payload)
