@@ -31,14 +31,14 @@ sudo python3 topo.py
 
 4. Iniciar el cliente `iperf` desde `h1`:
     ```bash
-    mininet> h1 iperf -c h2 -l 1400 -t 5
+    mininet> h1 iperf -c h2 -l 1400 -t 1
     ```
 
 ## UDP
 
 1. Iniciar el servidor `iperf` en `h2`:
     ```bash
-    mininet> h2 iperf -s &
+    mininet> h2 iperf -s -u &
     ```
 
 2. Ejecutar Wireshark en `h2`:
@@ -54,5 +54,5 @@ sudo python3 topo.py
 
 4. Iniciar el cliente `iperf` desde `h1` con soporte para UDP:
     ```bash
-    mininet> h1 iperf -c h2 -l 1400 -t 5 -u
+    mininet> h1 iperf -c h2 -l 1400 -t 1 -u
     ```
