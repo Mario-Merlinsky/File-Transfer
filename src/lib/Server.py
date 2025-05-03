@@ -15,6 +15,7 @@ from .Header import Header, HEADER_SIZE
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from pathlib import Path
+import logging
 
 
 # 25MB
@@ -49,6 +50,7 @@ class Server:
     # por el thread correspondiente
 
     def setup_new_client(self, client_addr: tuple[str, int]):
+        logging.info(f"Configurando nuevo cliente: {client_addr}")
         thread = Thread(
             target=self.handle_client,
             args=(client_addr,),
@@ -61,19 +63,19 @@ class Server:
         thread.start()
 
     def start(self):
-        print("Servidor creado con exito, esperando mensajes de cliente")
-
+        logging.info("Servidor iniciado con éxito, esperando mensajes de cliente")
         try:
             while True:
                 data, client_addr = self.socket.recvfrom(MSS + HEADER_SIZE)
                 if client_addr not in self.queues:
-                    print("Nueva conexion recibida")
+                    logging.info(f"Nueva conexión recibida: {client_addr}")
                     self.setup_new_client(client_addr)
                 self.queues[client_addr].put(data)
         except KeyboardInterrupt:
-            print("Servidor detenido")
+            logging.info("Servidor detenido manualmente")
 
     def handle_client(self, client_addr: tuple[str, int]):
+        logging.info(f"Cliente conectado: {client_addr}")
         queue = self.queues[client_addr]
         data = queue.get()
         datagram = Datagram.from_bytes(data)
@@ -95,10 +97,12 @@ class Server:
         client_payload: UploadSYN,
         client_address: str
     ):
+        logging.info(f"Recibido SYN para upload de {client_address}")
         ack = client_datagram.get_sequence_number()
         error = self.validate_upload_syn(client_payload)
         endp = self.endpoints[client_address]
         if error is not None:
+            logging.error(f"Error en SYN de upload: {error.decode()}")
             send_error_response(error, ack, endp)
             self.cleanup(client_address)
             return
@@ -118,13 +122,13 @@ class Server:
         endp.update_last_msg(ack)
 
         endp.send_message(ack)
+        logging.info(f"ACK enviado para upload de {client_address}")
 
         self.handle_upload(
             client_payload.filename,
             client_payload.file_size,
             client_address
         )
-        return
 
     def handle_upload(
         self,
@@ -132,6 +136,7 @@ class Server:
         file_size: int,
         client_address: str
     ):
+        logging.info(f"Iniciando recepción de archivo '{filename}' de {client_address}")
         endp = self.endpoints[client_address]
         file_path = str(Path(self.storage_path) / filename)
         try:
@@ -142,8 +147,9 @@ class Server:
                     self.queues[client_address],
                     file_size
                 )
+            logging.info(f"Archivo '{filename}' recibido correctamente de {client_address}")
         except Exception as e:
-            print(f"Error durante la recepción del archivo: {e}")
+            logging.error(f"Error durante la recepción del archivo '{filename}': {e}")
             Path(file_path).unlink(missing_ok=True)
 
     def validate_upload_syn(self, client_payload: UploadSYN):
@@ -151,7 +157,7 @@ class Server:
 
         if client_payload.file_size > MAX_FILE_SIZE:
             error = str.encode(
-                "El archivo es demasiado para grande para ser subido"
+                "El archivo es demasiado grande para ser subido"
             )
 
         return error
@@ -170,7 +176,7 @@ class Server:
         if self.rp.PROTOCOL_ID != \
                 client_payload.recovery_protocol:
             return str.encode(
-                "El metodo de recuperacion entre cliente y servidor "
+                "El método de recuperación entre cliente y servidor "
                 "no es consistente"
             )
         return None
@@ -181,16 +187,17 @@ class Server:
         client_payload: DownloadSYN,
         client_addr: tuple[str, int]
     ):
-
+        logging.info(f"Recibido SYN para download de {client_addr}")
         endp = self.endpoints[client_addr]
         ack = client_datagram.get_sequence_number()
         error, filepath = self.validate_download_syn(client_payload)
 
         if error is not None:
+            logging.error(f"Error en SYN de download: {error.decode()}")
             send_error_response(error, ack, endp)
             self.cleanup(client_addr)
             return
-        print("llego un syn valido")
+        logging.info(f"SYN válido para download de {client_addr}")
         file_data, rtt = self.send_download_ack(
             client_datagram.get_sequence_number(),
             filepath,
@@ -206,8 +213,7 @@ class Server:
             Flags.DOWNLOAD,
             rtt * TIMEOUT_COEFFICIENT
         )
-        print("Mande el archivo")
-        return
+        logging.info(f"Archivo enviado a {client_addr}")
 
     def send_download_ack(
         self,
@@ -216,7 +222,7 @@ class Server:
         endpoint: Endpoint,
         client_addr: tuple[str, int]
     ):
-
+        logging.info(f"Enviando ACK de download a {client_addr}")
         file_data = read_file(filepath)
         payload = DownloadACK(len(file_data), MSS).to_bytes()
 
@@ -232,7 +238,6 @@ class Server:
         ).to_bytes()
         endpoint.update_last_msg(datagram)
 
-        print("mande el download ack")
         queue = self.queues[client_addr]
         rtt = 0
         start = time()
@@ -246,17 +251,17 @@ class Server:
                     rtt = end - start
                     break
             except Empty:
-                print("Timeout esperando download ack, reenviando")
+                logging.warning(f"Timeout esperando download ACK de {client_addr}, reenviando")
                 start = time()
                 endpoint.send_message(datagram)
                 continue
-        print(f"rtt inicial = {rtt}")
+        logging.info(f"RTT inicial calculado: {rtt:.2f} segundos")
         return file_data, rtt
 
     def cleanup(self, client_addr: tuple[str, int]):
         self.queues.pop(client_addr)
         self.endpoints.pop(client_addr)
-        print(f"Cliente {client_addr} desconectado")
+        logging.info(f"Cliente {client_addr} desconectado")
 
 
 def send_error_response(payload: bytes, ack: int, endp: Endpoint):
@@ -270,4 +275,5 @@ def send_error_response(payload: bytes, ack: int, endp: Endpoint):
         if response.is_ack():
             return
     except timeout:
+        logging.warning("Timeout esperando ACK de error, reenviando")
         return send_error_response(payload, ack, endp)

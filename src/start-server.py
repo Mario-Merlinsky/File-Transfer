@@ -1,5 +1,7 @@
 import argparse
 import socket
+import logging
+from lib.logger import setup_logger
 from lib.Server import Server
 from lib.GoBackN import GoBackN
 from lib.StopAndWait import StopAndWait
@@ -38,6 +40,8 @@ def main():
     )
 
     args = parser.parse_args()
+    setup_logger(args.verbose, args.quiet)
+    logging.debug('Iniciando servidor con argumentos: %s', args)
     recovery_protocol = None
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     address = (args.host, args.port)
@@ -47,9 +51,11 @@ def main():
             recovery_protocol = GoBackN()
         case 'SW':
             recovery_protocol = StopAndWait()
+    logging.debug('Protocolo de recuperacion: %s', recovery_protocol)
     serv = Server(recovery_protocol, address, args.storage, sock)
+    logging.info('Servidor creado con protocolo %s', args.protocol)
     serv.start()
-# setear log con modo verbose o quiet
+
 
 
 if __name__ == '__main__':

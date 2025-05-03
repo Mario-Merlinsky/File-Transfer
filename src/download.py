@@ -1,8 +1,10 @@
 import argparse
 import socket
+import logging
 from lib.Client import Client
 from lib.StopAndWait import StopAndWait
 from lib.GoBackN import GoBackN
+from lib.logger import setup_logger
 
 
 def main():
@@ -31,14 +33,18 @@ def main():
     )
 
     args = parser.parse_args()
+    setup_logger(args.verbose, args.quiet)
+    logging.debug('Iniciando cliente de download con argumentos: %s', args)
     recovery_protocol = None
     addr = (args.host, args.port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     match args.protocol:
         case 'GBN':
             recovery_protocol = GoBackN()
+            
         case 'SW':
             recovery_protocol = StopAndWait()
+    logging.debug('Protocolo de recuperacion: %s', recovery_protocol)        
     client = Client(
         recovery_protocol,
         args.dst,
@@ -46,6 +52,7 @@ def main():
         addr,
         sock
     )
+    logging.info('Cliente creado con protocolo %s', args.protocol)
     client.start_download()
 
 

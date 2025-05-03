@@ -14,6 +14,7 @@ from .Messages.DownloadSYN import DownloadSYN
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from .Util import read_file
+import logging
 
 
 MSS = 1024
@@ -47,21 +48,22 @@ class Client:
         datagram = Datagram(header, syn_payload).to_bytes()
         try:
             self.endpoint.send_message(datagram)
-            print("Mande syn")
+            logging.debug("SYN enviado para upload")
             data = self.endpoint.receive_message()
-            print("Recibi mensaje")
+            logging.debug("Mensaje recibido durante handshake")
             response = Datagram.from_bytes(data)
-            print(f"flags: {response.header.flags}")
+            logging.debug(f"Flags recibidos: {response.header.flags}")
             if response.is_error():
-                print(response.analyze().msg)
+                logging.error(response.analyze().msg)
                 return None
             if response.is_upload_ack():
                 self.endpoint.set_timeout(None)
+                logging.info("Handshake de upload completado")
                 return response
-            print("No es un syn ack, handshake devuelta")
+            logging.warning("No es un SYN ACK, reintentando handshake")
             return self.handshake_upload(syn_payload)
         except timeout:
-            print("Timeout, handshake devuelta")
+            logging.warning("Timeout durante handshake, reintentando")
             return self.handshake_upload(syn_payload)
 
     def handshake_download(self, syn_payload):
@@ -75,16 +77,16 @@ class Client:
         datagram = Datagram(header, syn_payload).to_bytes()
         try:
             self.endpoint.send_message(datagram)
-            print("Mande syn")
+            logging.debug("SYN enviado para download")
             data = self.endpoint.receive_message()
-            print("Recibi mensaje")
+            logging.debug("Mensaje recibido durante handshake")
             response = Datagram.from_bytes(data)
-            print(f"flags: {response.header.flags}")
+            logging.debug(f"Flags recibidos: {response.header.flags}")
             if response.is_error():
-                print(response.analyze().msg)
+                logging.error(response.analyze().msg)
                 return None
             if not response.is_download_ack():
-                print("No es un syn ack, handshake devuelta")
+                logging.warning("No es un SYN ACK, reintentando handshake")
                 return self.handshake_download(syn_payload)
             self.endpoint.set_timeout(None)
             self.endpoint.increment_seq()
@@ -92,7 +94,7 @@ class Client:
             self.handshake_download_2(datagram)
             return response
         except timeout:
-            print("Timeout, handshake devuelta")
+            logging.warning("Timeout durante handshake, reintentando")
             return self.handshake_download(syn_payload)
 
     def handshake_download_2(self, datagram: Datagram):
@@ -106,6 +108,7 @@ class Client:
         datagram = Datagram(header, b"").to_bytes()
         self.endpoint.send_message(datagram)
         self.endpoint.update_last_msg(datagram)
+        logging.info("ACK enviado para completar handshake de download")
 
     def start_upload(self):
         file_data = read_file(self.filepath)
@@ -121,13 +124,14 @@ class Client:
         start = time()
         syn_ack = self.handshake_upload(syn_payload)
         if syn_ack is None:
+            logging.error("Handshake fallido durante upload")
             return
         rtt = time() - start
 
         ack_payload = syn_ack.analyze()
 
         if not isinstance(ack_payload, UploadACK):
-            print(ack_payload.msg)
+            logging.error(f"Error durante upload: {ack_payload.msg}")
             return
         queue = Queue(-1)
         thread = Thread(
@@ -136,6 +140,7 @@ class Client:
             daemon=True
         )
         thread.start()
+        logging.info("Iniciando envío de archivo")
         self.rp.send(
             self.endpoint,
             file_data,
@@ -144,6 +149,7 @@ class Client:
             Flags.UPLOAD,
             rtt * TIMEOUT_COEFFICIENT
         )
+        logging.info("Archivo enviado con éxito")
 
     def start_download(self):
         self.endpoint.set_timeout(INITIAL_RTT)
@@ -153,13 +159,14 @@ class Client:
             self.rp.PROTOCOL_ID
         ).to_bytes()
         syn_ack = self.handshake_download(payload)
-        print("Handhsake finalizado")
+        logging.info("Handshake finalizado para download")
         if syn_ack is None:
+            logging.error("Handshake fallido durante download")
             return
         ack_payload = syn_ack.analyze()
 
         if not isinstance(ack_payload, DownloadACK):
-            print(ack_payload.msg)
+            logging.error(f"Error durante download: {ack_payload.msg}")
             return
         filepath = str(Path(self.filepath) / self.filename)
         queue = Queue(-1)
@@ -169,14 +176,15 @@ class Client:
             daemon=True
         )
         thread.start()
+        logging.info(f"Iniciando descarga del archivo: {self.filename}")
         with open(filepath, "wb") as file:
             self.rp.receive(
                 self.endpoint, file, queue, ack_payload.filesize
             )
-
-        print("Descarga finalizada con exito")
+        logging.info("Descarga finalizada con éxito")
 
     def enqueue_incoming_packets(self, queue):
         while True:
             data = self.endpoint.receive_message()
             queue.put(data)
+            logging.debug("Paquete recibido y encolado")

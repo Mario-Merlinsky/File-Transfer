@@ -1,5 +1,7 @@
 import argparse
 import socket
+import logging
+from lib.logger import setup_logger
 from lib.StopAndWait import StopAndWait
 from lib.GoBackN import GoBackN
 from lib.Client import Client
@@ -31,6 +33,8 @@ def main():
     )
 
     args = parser.parse_args()
+    setup_logger(args.verbose, args.quiet)
+    logging.debug('Iniciando cliente de upload con argumentos: %s', args)
     recovery_protocol = None
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     addr = (args.host, args.port)
@@ -39,6 +43,7 @@ def main():
             recovery_protocol = GoBackN()
         case 'SW':
             recovery_protocol = StopAndWait()
+    logging.debug('Protocolo de recuperacion: %s', recovery_protocol)
     client = Client(
         recovery_protocol,
         args.src,
@@ -46,12 +51,10 @@ def main():
         addr,
         sock
     )
-
+    logging.info('Cliente creado con protocolo %s', args.protocol)
     client.start_upload()
 
 
-# setear log con modo verbose o quiet
-# Llamar cliente con argumentos
 
 if __name__ == '__main__':
     main()

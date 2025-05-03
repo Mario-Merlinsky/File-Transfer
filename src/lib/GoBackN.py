@@ -10,6 +10,7 @@ from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from .ProtocolID import ProtocolID
 from math import ceil
+import logging
 
 CONNECTION_TIMEOUT = 5
 
@@ -32,12 +33,11 @@ class GoBackN(RecoveryProtocol):
         next_seq = base
         endpoint.increment_seq()
         buffer = {}
-        print(f"[INFO] Tamaño del archivo: {len(file_data)} bytes")
-        print(f"[INFO] MSS: {receiver_mss} bytes")
-        print(f"[INFO] Tamaño de la ventana: {endpoint.window_size} paquetes")
-        print(
-            f"[INFO] Número total de paquetes: "
-            f"{ceil(len(file_data) / receiver_mss)}")
+        logging.info(f"Tamaño del archivo: {len(file_data)} bytes")
+        logging.info(f"MSS: {receiver_mss} bytes")
+        logging.info(f"Tamaño de la ventana: {endpoint.window_size} paquetes")
+        logging.info(
+            f"Número total de paquetes: {ceil(len(file_data) / receiver_mss)}")
         while base * receiver_mss < len(file_data):
             while next_seq < base + endpoint.window_size and next_seq * \
                     receiver_mss < len(file_data):
@@ -57,8 +57,8 @@ class GoBackN(RecoveryProtocol):
                 if next_seq == 0:
                     start_timer(timer_event, timer_thread, rtt, queue)
                 endpoint.send_message(datagram)
-                print(
-                    f"[SEND] Paquete enviado: Seq={next_seq + 1}, "
+                logging.debug(
+                    f"Paquete enviado: Seq={next_seq + 1}, "
                     f"Tamaño={len(segment)} bytes")
                 next_seq += 1
             try:
@@ -70,7 +70,7 @@ class GoBackN(RecoveryProtocol):
 
                 if response_datagram.is_ack():
                     ack_number = response_datagram.get_ack_number() - 1
-                    print(f"ACK recibido: {ack_number + 1}")
+                    logging.info(f"ACK recibido: {ack_number + 1}")
                     if ack_number > base:
                         base = ack_number
                         if base == next_seq:
@@ -79,15 +79,15 @@ class GoBackN(RecoveryProtocol):
                             start_timer(timer_event, timer_thread, rtt, queue)
 
             except TimeoutError:
-                print(f"Timeout actual: {rtt} segundos")
-                print("Timeout esperando ACK, reenviando ventana")
+                logging.debug(f"Timeout actual: {rtt} segundos")
+                logging.debug("Timeout esperando ACK, reenviando ventana")
                 rtt = rtt * 2
-                print(f"[SEND] Reenviando ventana desde Seq={base + 1}")
-                print(f"[SEND] hasta Seq={next_seq + 1}")
+                logging.info(f"Reenviando ventana desde Seq={base + 1}")
+                logging.info(f"Hasta Seq={next_seq + 1}")
                 for seq in range(base, next_seq):
                     if seq in buffer:
                         endpoint.send_message(buffer[seq])
-                        print(f"Reenviado paquete: {seq + 1}")
+                        logging.debug(f"Reenviado paquete: {seq + 1}")
                 start_timer(timer_event, timer_thread, rtt, queue)
 
     def receive(
@@ -100,21 +100,20 @@ class GoBackN(RecoveryProtocol):
         endpoint.increment_ack()
         bytes_written = 0
         while bytes_written < file_size:
-            print(f"bytes_written: {bytes_written}")
-            print(f"file_size: {file_size}")
+            logging.debug(f"bytes_written: {bytes_written}")
+            logging.debug(f"file_size: {file_size}")
             data = queue.get()
             datagram = Datagram.from_bytes(data)
-            print(f"[RECEIVE] Numero de seq esperado: {endpoint.ack}")
+            logging.debug(f"Numero de seq esperado: {endpoint.ack}")
 
             if datagram.get_sequence_number() == endpoint.ack:
-                print(
-                    "[RECEIVE] Paquete recibido antes del if: "
-                    f"Seq={datagram.get_sequence_number()}")
+                logging.debug(
+                    f"Paquete recibido: Seq={datagram.get_sequence_number()}")
                 endpoint.increment_ack()
                 file.write(datagram.data)
                 bytes_written += len(datagram.data)
                 endpoint.increment_seq()
-                print(f"ack: {endpoint.ack}")
+                logging.debug(f"ACK actualizado: {endpoint.ack}")
                 ack_header = Header(
                     payload_size=0,
                     sequence_number=endpoint.seq,
@@ -124,17 +123,13 @@ class GoBackN(RecoveryProtocol):
                 ack_datagram = Datagram(ack_header, b'').to_bytes()
                 endpoint.send_message(ack_datagram)
                 endpoint.update_last_msg(ack_datagram)
-                print(
-                    f"[SEND] ACK enviado: {endpoint.ack}")
+                logging.debug(f"ACK enviado: {endpoint.ack}")
             else:
-                print(
-                    f"[RECEIVE] Paquete fuera de orden: "
-                    f"Seq={datagram.get_sequence_number()}")
+                logging.debug(
+                    f"Paquete fuera de orden: Seq={datagram.get_sequence_number()}")
                 endpoint.send_last_message()
         file.close()
-        print(
-            f"[SERVER] Archivo recibido correctamente: {bytes_written} bytes")
-        # se perdio el ultimo ack
+        logging.info(f"Archivo recibido correctamente: {bytes_written} bytes")
         while True:
             try:
                 data = queue.get(timeout=CONNECTION_TIMEOUT)
@@ -158,10 +153,8 @@ def stop_timer(timer_event, timer_thread: Thread):
     if timer_thread is not None:
         timer_thread.join()
         timer_thread = None
-    pass
 
 
 def timer(timer_event: Event, timer_thread: Thread, rtt: int, queue: Queue):
     if not timer_event.wait(rtt):
         queue.put(TimeoutError())
-    pass
