@@ -41,10 +41,10 @@ def main():
     match args.protocol:
         case 'GBN':
             recovery_protocol = GoBackN()
-            
+
         case 'SW':
             recovery_protocol = StopAndWait()
-    logging.debug('Protocolo de recuperacion: %s', recovery_protocol)        
+    logging.debug('Protocolo de recuperacion: %s', recovery_protocol)
     client = Client(
         recovery_protocol,
         args.dst,

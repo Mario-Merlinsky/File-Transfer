@@ -1,5 +1,6 @@
 import logging
 
+
 def setup_logger(verbose: bool = False, quiet: bool = False):
     """
     Configura el logger para el proyecto.

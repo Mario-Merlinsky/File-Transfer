@@ -70,7 +70,7 @@ class GoBackN(RecoveryProtocol):
 
                 if response_datagram.is_ack():
                     ack_number = response_datagram.get_ack_number() - 1
-                    logging.info(f"ACK recibido: {ack_number + 1}")
+                    logging.debug(f"ACK recibido: {ack_number + 1}")
                     if ack_number > base:
                         base = ack_number
                         if base == next_seq:
@@ -82,8 +82,8 @@ class GoBackN(RecoveryProtocol):
                 logging.debug(f"Timeout actual: {rtt} segundos")
                 logging.debug("Timeout esperando ACK, reenviando ventana")
                 rtt = rtt * 2
-                logging.info(f"Reenviando ventana desde Seq={base + 1}")
-                logging.info(f"Hasta Seq={next_seq + 1}")
+                logging.debug(f"Reenviando ventana desde Seq={base + 1}")
+                logging.debug(f"Hasta Seq={next_seq + 1}")
                 for seq in range(base, next_seq):
                     if seq in buffer:
                         endpoint.send_message(buffer[seq])
@@ -125,8 +125,8 @@ class GoBackN(RecoveryProtocol):
                 endpoint.update_last_msg(ack_datagram)
                 logging.debug(f"ACK enviado: {endpoint.ack}")
             else:
-                logging.debug(
-                    f"Paquete fuera de orden: Seq={datagram.get_sequence_number()}")
+                seq_num = datagram.get_sequence_number()
+                logging.debug(f"Paquete fuera de orden: Seq={seq_num}")
                 endpoint.send_last_message()
         file.close()
         logging.info(f"Archivo recibido correctamente: {bytes_written} bytes")

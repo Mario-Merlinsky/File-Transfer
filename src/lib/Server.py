@@ -63,7 +63,8 @@ class Server:
         thread.start()
 
     def start(self):
-        logging.info("Servidor iniciado con éxito, esperando mensajes de cliente")
+        logging.info(
+            "Servidor iniciado con éxito, esperando mensajes de cliente")
         try:
             while True:
                 data, client_addr = self.socket.recvfrom(MSS + HEADER_SIZE)
@@ -136,7 +137,8 @@ class Server:
         file_size: int,
         client_address: str
     ):
-        logging.info(f"Iniciando recepción de archivo '{filename}' de {client_address}")
+        logging.info(
+            f"Iniciando recepción de archivo '{filename}' de {client_address}")
         endp = self.endpoints[client_address]
         file_path = str(Path(self.storage_path) / filename)
         try:
@@ -147,9 +149,13 @@ class Server:
                     self.queues[client_address],
                     file_size
                 )
-            logging.info(f"Archivo '{filename}' recibido correctamente de {client_address}")
+                logging.info(
+                    f"Archivo '{filename}' recibido correctamente de "
+                    f"{client_address}"
+                )
         except Exception as e:
-            logging.error(f"Error durante la recepción del archivo '{filename}': {e}")
+            logging.error(
+                f"Error durante la recepción del archivo '{filename}': {e}")
             Path(file_path).unlink(missing_ok=True)
 
     def validate_upload_syn(self, client_payload: UploadSYN):
@@ -251,7 +257,9 @@ class Server:
                     rtt = end - start
                     break
             except Empty:
-                logging.warning(f"Timeout esperando download ACK de {client_addr}, reenviando")
+                logging.debug(
+                    f"Timeout esperando download ACK de {client_addr},"
+                    f" reenviando")
                 start = time()
                 endpoint.send_message(datagram)
                 continue

@@ -55,6 +55,5 @@ def main():
     client.start_upload()
 
 
-
 if __name__ == '__main__':
     main()

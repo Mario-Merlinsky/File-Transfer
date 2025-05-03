@@ -1,4 +1,6 @@
 import logging
+
+
 def read_file(filepath: str) -> bytes:
     try:
         with open(filepath, "rb") as file:

@@ -55,13 +55,15 @@ class StopAndWait(RecoveryProtocol):
                 try:
                     start = time()
                     endpoint.send_message(datagram)
-                    logging.debug(f"Paquete enviado: Seq={header.sequence_number}")
+                    logging.debug(
+                        f"Paquete enviado: Seq={header.sequence_number}")
                     response_data = queue.get(timeout=rtt)
                     rtt = (rtt + (time() - start)) / 2
                     logging.debug(f"RTT actualizado: {rtt:.2f} segundos")
                     response_datagram = Datagram.from_bytes(response_data)
 
-                    logging.debug(f"Flags recibidos: {response_datagram.header.flags}")
+                    logging.debug(
+                        f"Flags recibidos: {response_datagram.header.flags}")
 
                     if response_datagram.is_ack():
                         if response_datagram.get_ack_number() == endpoint.seq:
@@ -70,15 +72,18 @@ class StopAndWait(RecoveryProtocol):
                             endpoint.update_last_msg(datagram)
                             break
                         if response_datagram.get_ack_number() < endpoint.seq:
-                            logging.debug(f"ACK duplicado recibido: {response_datagram.get_ack_number()}")
+                            ack_number = response_datagram.get_ack_number()
+                            logging.debug(
+                                f"ACK duplicado recibido: {ack_number}")
                             continue
                     else:
-                        logging.warning("No se recibió un ACK válido, retransmitiendo último mensaje")
+                        logging.warning(
+                            "ACK inválido, retransmitiendo último mensaje")
                         endpoint.send_last_message()
                         continue
 
                 except Empty:
-                    logging.warning("Timeout esperando ACK, retransmitiendo")
+                    logging.debug("Timeout esperando ACK, retransmitiendo")
                     rtt = rtt * 2
                     continue
 
@@ -99,7 +104,9 @@ class StopAndWait(RecoveryProtocol):
             try:
                 data = queue.get()
                 datagram = Datagram.from_bytes(data)
-                logging.debug(f"Paquete recibido: Seq={datagram.get_sequence_number()}, Esperado={endpoint.ack + 1}")
+                logging.debug(
+                    f"Paquete recibido: Seq={datagram.get_sequence_number()},"
+                    f" Esperado={endpoint.ack + 1}")
                 logging.debug(f"Flags recibidos: {datagram.header.flags}")
                 received_payload = datagram.data
 
@@ -122,7 +129,9 @@ class StopAndWait(RecoveryProtocol):
                     endpoint.send_message(ack)
                     logging.debug(f"ACK enviado: {endpoint.ack}")
                 else:
-                    logging.debug(f"Paquete duplicado recibido: Seq={datagram.get_sequence_number()}")
+                    seq_number = datagram.get_sequence_number()
+                    logging.debug(
+                        f"Paquete duplicado recibido: Seq={seq_number}")
                     endpoint.send_last_message()
             except Exception as e:
                 logging.error(f"Error en recepción: {e}")
