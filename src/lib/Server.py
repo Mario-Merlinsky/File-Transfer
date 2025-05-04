@@ -218,7 +218,7 @@ class Server:
     ):
 
         file_data = read_file(filepath)
-        payload = DownloadACK(len(file_data), MSS).to_bytes()
+        payload = DownloadACK(len(file_data)).to_bytes()
 
         header = Header(
             sequence_number=endpoint.seq,
@@ -242,7 +242,7 @@ class Server:
                 data = queue.get(timeout=INITIAL_RTT)
                 end = time()
                 response = Datagram.from_bytes(data)
-                if response.is_download_ack():
+                if response.is_ack():
                     rtt = end - start
                     break
             except Empty:
