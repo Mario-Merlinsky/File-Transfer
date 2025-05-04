@@ -102,7 +102,7 @@ class Client:
             0,
             self.endpoint.seq,
             self.endpoint.ack,
-            Flags.ACK_DOWNLOAD,
+            Flags.ACK,
         )
 
         datagram = Datagram(header, b"").to_bytes()
@@ -117,7 +117,6 @@ class Client:
         syn_payload = UploadSYN(
             self.filename,
             len(file_data),
-            MSS,
             self.rp.PROTOCOL_ID
         ).to_bytes()
 
