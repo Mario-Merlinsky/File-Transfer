@@ -56,6 +56,7 @@ class GoBackN(RecoveryProtocol):
                 start = time()
                 if next_seq == 0:
                     start_timer(timer_event, timer_thread, rtt, queue)
+                    logging.debug(f"Iniciando timer paquete: {base + 1}")
                 endpoint.send_message(datagram)
                 logging.debug(
                     f"Paquete enviado: Seq={next_seq + 1}, "
@@ -63,9 +64,9 @@ class GoBackN(RecoveryProtocol):
                 next_seq += 1
             try:
                 response_data = queue.get()
-                rtt = (rtt + (time() - start)) / 2
                 if isinstance(response_data, Exception):
                     raise response_data
+                rtt = (rtt + (time() - start)) / 2
                 response_datagram = Datagram.from_bytes(response_data)
 
                 if response_datagram.is_ack():
@@ -73,10 +74,8 @@ class GoBackN(RecoveryProtocol):
                     logging.debug(f"ACK recibido: {ack_number + 1}")
                     if ack_number > base:
                         base = ack_number
-                        if base == next_seq:
-                            stop_timer(timer_event, timer_thread)
-                        else:
-                            start_timer(timer_event, timer_thread, rtt, queue)
+                        stop_timer(timer_event, timer_thread)
+                        start_timer(timer_event, timer_thread, rtt, queue)
 
             except TimeoutError:
                 logging.debug(f"Timeout actual: {rtt} segundos")

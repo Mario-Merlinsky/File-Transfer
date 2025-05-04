@@ -150,6 +150,9 @@ class Client:
         )
         logging.info("Archivo enviado con éxito")
 
+        end = time() - start
+        logging.info(f"Tiempo de transferencia: {end:.2f} segundos")
+
     def start_download(self):
         self.endpoint.set_timeout(INITIAL_RTT)
         payload = DownloadSYN(
@@ -157,6 +160,7 @@ class Client:
             MSS,
             self.rp.PROTOCOL_ID
         ).to_bytes()
+        start = time()
         syn_ack = self.handshake_download(payload)
         logging.info("Handshake finalizado para download")
         if syn_ack is None:
@@ -181,6 +185,8 @@ class Client:
                 self.endpoint, file, queue, ack_payload.filesize
             )
         logging.info("Descarga finalizada con éxito")
+        end = time() - start
+        logging.info(f"Tiempo de transferencia: {end:.2f} segundos")
 
     def enqueue_incoming_packets(self, queue):
         while True:
