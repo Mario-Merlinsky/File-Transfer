@@ -74,6 +74,3 @@ python3 download.py -H 10.0.0.2 -p 7000 -d <ruta_de_descarga> -n <nombre_en_serv
 
 - El servidor debe estar corriendo antes de iniciar una transferencia.
 - El protocolo puede ser `stop_and_wait (SW)`  o `go_back_n (GBN)`.
-# Anexo
-
-Puedes encontrar información adicional en el [README del anexo](./anexo/README.md).
