@@ -38,9 +38,6 @@ class Server:
         self.address = address
         self.storage_path = storage_path
         self.socket = socket
-        self.queues = {}  # {Cliente: Queue}
-        self.endpoints = {}  # {Cliente: Endpoint}
-
         self.queues: dict[tuple[str, int], Queue] = {}
         self.endpoints: dict[tuple[str, int], Endpoint] = {}
     # Este metodo recibe los mensajes de clientes
