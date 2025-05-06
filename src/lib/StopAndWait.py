@@ -8,9 +8,8 @@ from .Datagram import Datagram
 from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from .ProtocolID import ProtocolID
+from .Server import CONNECTION_TIMEOUT
 import logging
-
-CONNECTION_TIMEOUT = 5
 
 
 class StopAndWait(RecoveryProtocol):
@@ -112,8 +111,6 @@ class StopAndWait(RecoveryProtocol):
 
                 if datagram.get_sequence_number() - 1 == endpoint.ack:
                     endpoint.increment_seq()
-                    endpoint.increment_ack()
-
                     file.write(received_payload)
                     bytes_written += len(received_payload)
                     endpoint.ack = datagram.get_sequence_number()

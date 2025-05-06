@@ -2,7 +2,6 @@ from queue import Queue
 from queue import Empty
 from time import time
 from socket import socket
-from socket import timeout
 from threading import Thread
 from .Datagram import Datagram
 from .Flags import Flags
@@ -16,7 +15,7 @@ from .RecoveryProtocol import RecoveryProtocol
 from .Endpoint import Endpoint
 from pathlib import Path
 import logging
-
+CONNECTION_TIMEOUT = 5
 
 # 25MB
 MAX_FILE_SIZE = 26214400
@@ -99,10 +98,10 @@ class Server:
         ack = client_datagram.get_sequence_number()
         error = self.validate_upload_syn(client_payload)
         endp = self.endpoints[client_address]
+        queue = self.queues[client_address]
         if error is not None:
             logging.error(f"Error en SYN de upload: {error.decode()}")
-            send_error_response(error, ack, endp)
-            self.cleanup(client_address)
+            send_error_response(error, ack, endp, queue)
             return
 
         payload = UploadACK(MSS).to_bytes()
@@ -195,10 +194,10 @@ class Server:
         ack = client_datagram.get_sequence_number()
         error, filepath = self.validate_download_syn(client_payload)
 
+        queue = self.queues[client_addr]
         if error is not None:
             logging.error(f"Error en SYN de download: {error.decode()}")
-            send_error_response(error, ack, endp)
-            self.cleanup(client_addr)
+            send_error_response(error, ack, endp, queue)
             return
         logging.info(f"SYN válido para download de {client_addr}")
         file_data, rtt = self.send_download_ack(
@@ -207,7 +206,6 @@ class Server:
             endp,
             client_addr
         )
-        queue = self.queues[client_addr]
         self.rp.send(
             endp,
             file_data,
@@ -269,16 +267,16 @@ class Server:
         logging.info(f"Cliente {client_addr} desconectado")
 
 
-def send_error_response(payload: bytes, ack: int, endp: Endpoint):
+def send_error_response(
+    payload: bytes, ack: int, endp: Endpoint, queue: Queue
+):
     flag = Flags.ERROR
     header = Header(len(payload), endp.seq, ack, flag)
     datagram = Datagram(header, payload).to_bytes()
     endp.send_message(datagram)
-    try:
-        data = endp.receive_message()
-        response = Datagram.from_bytes(data)
-        if response.is_ack():
+    while True:
+        try:
+            queue.get(timeout=CONNECTION_TIMEOUT)
+            endp.send_message(datagram)
+        except Empty:
             return
-    except timeout:
-        logging.warning("Timeout esperando ACK de error, reenviando")
-        return send_error_response(payload, ack, endp)

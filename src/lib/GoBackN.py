@@ -11,8 +11,7 @@ from .Endpoint import Endpoint
 from .ProtocolID import ProtocolID
 from math import ceil
 import logging
-
-CONNECTION_TIMEOUT = 5
+from .Server import CONNECTION_TIMEOUT
 
 
 class GoBackN(RecoveryProtocol):

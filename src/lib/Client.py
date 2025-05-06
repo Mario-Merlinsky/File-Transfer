@@ -113,7 +113,8 @@ class Client:
     def start_upload(self):
         file_data = read_file(self.filepath)
         self.endpoint.set_timeout(INITIAL_RTT)
-
+        if file_data is None:
+            return
         syn_payload = UploadSYN(
             self.filename,
             len(file_data),
